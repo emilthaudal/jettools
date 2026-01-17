@@ -19,7 +19,7 @@ local function CreateOptionsFrame()
         insets = { left = 4, right = 4, top = 4, bottom = 4 }
     })
     frame:SetBackdropColor(0.1, 0.1, 0.1, 0.9)
-    frame:SetBackdropBorderColor(0.4, 0.4, 0.4)
+    frame:SetBackdropBorderColor(0.3, 0.4, 0.6)
     frame:EnableMouse(true)
     frame:SetMovable(true)
     frame:RegisterForDrag("LeftButton")
@@ -35,7 +35,7 @@ local function CreateOptionsFrame()
     -- Title
     local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     title:SetPoint("TOP", 0, -10)
-    title:SetText("|cff00ff00JetTools|r Options")
+    title:SetText("|cff00aaffJet|r|cffaa66ffTools|r Options")
     
     -- Close button
     local closeBtn = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
@@ -104,7 +104,7 @@ local function CreateSeparator(parent, yOffset)
     local separator = parent:CreateTexture(nil, "ARTWORK")
     separator:SetPoint("TOPLEFT", 0, yOffset - 5)
     separator:SetSize(270, 1)
-    separator:SetColorTexture(0.4, 0.4, 0.4, 0.8)
+    separator:SetColorTexture(0.3, 0.4, 0.6, 0.8)
     return yOffset - 15
 end
 
@@ -132,7 +132,7 @@ local function CreateDropdown(parent, label, x, y, width, options, selectedValue
         insets = { left = 2, right = 2, top = 2, bottom = 2 }
     })
     button:SetBackdropColor(0.1, 0.1, 0.1, 0.9)
-    button:SetBackdropBorderColor(0.4, 0.4, 0.4)
+    button:SetBackdropBorderColor(0.3, 0.4, 0.6)
     
     local buttonText = button:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     buttonText:SetPoint("LEFT", 8, 0)
@@ -158,7 +158,7 @@ local function CreateDropdown(parent, label, x, y, width, options, selectedValue
         insets = { left = 2, right = 2, top = 2, bottom = 2 }
     })
     listFrame:SetBackdropColor(0.1, 0.1, 0.1, 0.95)
-    listFrame:SetBackdropBorderColor(0.4, 0.4, 0.4)
+    listFrame:SetBackdropBorderColor(0.3, 0.4, 0.6)
     listFrame:SetFrameStrata("TOOLTIP")
     listFrame:Hide()
     
@@ -264,7 +264,7 @@ local function BuildRangeIndicatorOptions(parent, yOffset)
     local header = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     header:SetPoint("TOPLEFT", 0, yOffset)
     header:SetText("Range Indicator")
-    header:SetTextColor(1, 0.82, 0)
+    header:SetTextColor(0.67, 0.4, 1)
     yOffset = yOffset - 25
     
     -- Enable checkbox
@@ -300,7 +300,7 @@ local function BuildCurrentExpansionFilterOptions(parent, yOffset)
     local header = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     header:SetPoint("TOPLEFT", 0, yOffset)
     header:SetText("Current Expansion Filter")
-    header:SetTextColor(1, 0.82, 0)
+    header:SetTextColor(0.67, 0.4, 1)
     yOffset = yOffset - 25
     
     -- Enable checkbox (master toggle)
@@ -355,7 +355,7 @@ local function BuildAutoRoleQueueOptions(parent, yOffset)
     local header = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     header:SetPoint("TOPLEFT", 0, yOffset)
     header:SetText("Auto Role Queue")
-    header:SetTextColor(1, 0.82, 0)
+    header:SetTextColor(0.67, 0.4, 1)
     yOffset = yOffset - 20
     
     -- Description

@@ -15,7 +15,7 @@ local function OnEvent(self, event, ...)
     
     if event == "LFG_ROLE_CHECK_SHOW" then
         CompleteLFGRoleCheck(true)
-        print("|cff00ff00JetTools|r Role check accepted.")
+        print("|cff00aaffJetTools|r Role check accepted.")
     end
 end
 
