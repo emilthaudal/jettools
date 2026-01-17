@@ -141,9 +141,10 @@ local function CreateDropdown(parent, label, x, y, width, options, selectedValue
     buttonText:SetText(selectedValue or "Select...")
     button.text = buttonText
     
-    local arrow = button:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    local arrow = button:CreateTexture(nil, "OVERLAY")
     arrow:SetPoint("RIGHT", -5, 0)
-    arrow:SetText("▼")
+    arrow:SetSize(12, 12)
+    arrow:SetTexture("Interface\\ChatFrame\\ChatFrameExpandArrow")
     
     -- Dropdown list frame
     local listFrame = CreateFrame("Frame", nil, button, "BackdropTemplate")
