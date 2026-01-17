@@ -8,3 +8,4 @@
 Core.lua
 Options.lua
 Modules/RangeIndicator.lua
+Modules/CurrentExpansionFilter.lua
