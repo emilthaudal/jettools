@@ -4,6 +4,7 @@
 ## Author: Jet
 ## Version: 1.0.0
 ## SavedVariablesPerCharacter: JetToolsDB
+## X-Curse-Project-ID: 1432663
 
 Core.lua
 Options.lua
