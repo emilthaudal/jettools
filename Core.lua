@@ -15,14 +15,13 @@ local defaults = {
         RangeIndicator = {
             enabled = true,
             fontSize = 32,
+            fontFace = "Friz Quadrata TT",
         },
         CurrentExpansionFilter = {
             enabled = true,
             craftingOrdersEnabled = true,
-            craftingOrdersFilterValue = true,
             craftingOrdersFocusSearch = false,
             auctionHouseEnabled = true,
-            auctionHouseFilterValue = true,
             auctionHouseFocusSearch = false,
         },
     },

@@ -8,22 +8,54 @@ local addonName, JT = ...
 local RangeIndicator = {}
 JT:RegisterModule("RangeIndicator", RangeIndicator)
 
--- Class-specific range check abilities (interrupts for melee)
+-- LibSharedMedia support (optional)
+local LSM = LibStub and LibStub("LibSharedMedia-3.0", true)
+
+-- Fallback fonts if LSM is not available
+local FALLBACK_FONTS = {
+    ["Friz Quadrata TT"] = "Fonts\\FRIZQT__.TTF",
+    ["Morpheus"] = "Fonts\\MORPHEUS.TTF",
+    ["Skurri"] = "Fonts\\SKURRI.TTF",
+    ["Arial Narrow"] = "Fonts\\ARIALN.TTF",
+}
+
+-- Get list of available fonts (for Options UI)
+function RangeIndicator:GetAvailableFonts()
+    if LSM then
+        local fonts = {}
+        for _, name in ipairs(LSM:List("font")) do
+            fonts[name] = name
+        end
+        return fonts
+    else
+        local fonts = {}
+        for name, _ in pairs(FALLBACK_FONTS) do
+            fonts[name] = name
+        end
+        return fonts
+    end
+end
+
+-- Get font path by name
+local function GetFontPath(fontName)
+    if LSM then
+        return LSM:Fetch("font", fontName) or "Fonts\\FRIZQT__.TTF"
+    else
+        return FALLBACK_FONTS[fontName] or "Fonts\\FRIZQT__.TTF"
+    end
+end
+
+-- Class-specific range check abilities (melee abilities for accurate range)
 local CLASS_RANGE_ABILITIES = {
-    WARRIOR = "Pummel",
-    PALADIN = "Rebuke", 
-    DEATHKNIGHT = "Mind Freeze",
-    MONK = "Spear Hand Strike",
-    DEMONHUNTER = "Disrupt",
-    ROGUE = "Kick",
-    DRUID = "Skull Bash",
-    SHAMAN = "Wind Shear",
-    EVOKER = "Quell",
-    -- Ranged classes (fallback - these won't really use this module but included for completeness)
-    HUNTER = "Counter Shot",
-    MAGE = "Counterspell",
-    WARLOCK = "Spell Lock",
-    PRIEST = "Shadow Word: Death", -- Priests don't have an interrupt baseline
+    WARRIOR = "Slam",
+    PALADIN = "Crusader Strike",
+    DEATHKNIGHT = "Death Strike",
+    MONK = "Tiger Palm",
+    DEMONHUNTER = "Demon's Bite",
+    ROGUE = "Sinister Strike",
+    DRUID = "Shred",
+    SHAMAN = "Stormstrike",
+    EVOKER = "Quell",  -- Mid-range class, 25yd ability
 }
 
 -- Module state
@@ -111,7 +143,8 @@ local function CreateIndicator()
     -- Set font before SetText to avoid "Font not set" error
     local settings = JT:GetModuleSettings("RangeIndicator")
     local fontSize = settings and settings.fontSize or 24
-    indicatorText:SetFont("Fonts\\FRIZQT__.TTF", fontSize, "OUTLINE")
+    local fontPath = GetFontPath(settings and settings.fontFace or "Friz Quadrata TT")
+    indicatorText:SetFont(fontPath, fontSize, "OUTLINE")
     
     indicatorText:SetText("+")
     
@@ -136,7 +169,8 @@ function RangeIndicator:ApplySettings()
     local settings = JT:GetModuleSettings("RangeIndicator")
     if not settings then return end
     
-    indicatorText:SetFont("Fonts\\FRIZQT__.TTF", settings.fontSize, "OUTLINE")
+    local fontPath = GetFontPath(settings.fontFace or "Friz Quadrata TT")
+    indicatorText:SetFont(fontPath, settings.fontSize, "OUTLINE")
 end
 
 -- Show the indicator
@@ -229,7 +263,7 @@ end
 
 -- Handle setting changes
 function RangeIndicator:OnSettingChanged(key, value)
-    if key == "fontSize" then
+    if key == "fontSize" or key == "fontFace" then
         self:ApplySettings()
     end
 end
