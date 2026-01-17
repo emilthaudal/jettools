@@ -1,0 +1,10 @@
+## Interface: 120000
+## Title: JetTools
+## Notes: Personal addon suite replacing WeakAuras
+## Author: Jet
+## Version: 1.0.0
+## SavedVariablesPerCharacter: JetToolsDB
+
+Core.lua
+Options.lua
+Modules/RangeIndicator.lua
