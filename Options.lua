@@ -8,7 +8,7 @@ local optionsFrame = nil
 -- Create the options frame
 local function CreateOptionsFrame()
     local frame = CreateFrame("Frame", "JetToolsOptionsFrame", UIParent, "BackdropTemplate")
-    frame:SetSize(300, 440)
+    frame:SetSize(300, 530)
     frame:SetPoint("CENTER")
     frame:SetBackdrop({
         bgFile = "Interface/Tooltips/UI-Tooltip-Background",
@@ -19,7 +19,7 @@ local function CreateOptionsFrame()
         insets = { left = 4, right = 4, top = 4, bottom = 4 }
     })
     frame:SetBackdropColor(0.1, 0.1, 0.1, 0.9)
-    frame:SetBackdropBorderColor(0.4, 0.4, 0.4)
+    frame:SetBackdropBorderColor(0.3, 0.4, 0.6)
     frame:EnableMouse(true)
     frame:SetMovable(true)
     frame:RegisterForDrag("LeftButton")
@@ -35,7 +35,7 @@ local function CreateOptionsFrame()
     -- Title
     local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     title:SetPoint("TOP", 0, -10)
-    title:SetText("|cff00ff00JetTools|r Options")
+    title:SetText("|cff00aaffJet|r|cffaa66ffTools|r Options")
     
     -- Close button
     local closeBtn = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
@@ -104,7 +104,7 @@ local function CreateSeparator(parent, yOffset)
     local separator = parent:CreateTexture(nil, "ARTWORK")
     separator:SetPoint("TOPLEFT", 0, yOffset - 5)
     separator:SetSize(270, 1)
-    separator:SetColorTexture(0.4, 0.4, 0.4, 0.8)
+    separator:SetColorTexture(0.3, 0.4, 0.6, 0.8)
     return yOffset - 15
 end
 
@@ -132,7 +132,7 @@ local function CreateDropdown(parent, label, x, y, width, options, selectedValue
         insets = { left = 2, right = 2, top = 2, bottom = 2 }
     })
     button:SetBackdropColor(0.1, 0.1, 0.1, 0.9)
-    button:SetBackdropBorderColor(0.4, 0.4, 0.4)
+    button:SetBackdropBorderColor(0.3, 0.4, 0.6)
     
     local buttonText = button:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     buttonText:SetPoint("LEFT", 8, 0)
@@ -141,9 +141,10 @@ local function CreateDropdown(parent, label, x, y, width, options, selectedValue
     buttonText:SetText(selectedValue or "Select...")
     button.text = buttonText
     
-    local arrow = button:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    local arrow = button:CreateTexture(nil, "OVERLAY")
     arrow:SetPoint("RIGHT", -5, 0)
-    arrow:SetText("▼")
+    arrow:SetSize(12, 12)
+    arrow:SetTexture("Interface\\ChatFrame\\ChatFrameExpandArrow")
     
     -- Dropdown list frame
     local listFrame = CreateFrame("Frame", nil, button, "BackdropTemplate")
@@ -158,7 +159,7 @@ local function CreateDropdown(parent, label, x, y, width, options, selectedValue
         insets = { left = 2, right = 2, top = 2, bottom = 2 }
     })
     listFrame:SetBackdropColor(0.1, 0.1, 0.1, 0.95)
-    listFrame:SetBackdropBorderColor(0.4, 0.4, 0.4)
+    listFrame:SetBackdropBorderColor(0.3, 0.4, 0.6)
     listFrame:SetFrameStrata("TOOLTIP")
     listFrame:Hide()
     
@@ -264,7 +265,7 @@ local function BuildRangeIndicatorOptions(parent, yOffset)
     local header = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     header:SetPoint("TOPLEFT", 0, yOffset)
     header:SetText("Range Indicator")
-    header:SetTextColor(1, 0.82, 0)
+    header:SetTextColor(0.67, 0.4, 1)
     yOffset = yOffset - 25
     
     -- Enable checkbox
@@ -300,7 +301,7 @@ local function BuildCurrentExpansionFilterOptions(parent, yOffset)
     local header = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     header:SetPoint("TOPLEFT", 0, yOffset)
     header:SetText("Current Expansion Filter")
-    header:SetTextColor(1, 0.82, 0)
+    header:SetTextColor(0.67, 0.4, 1)
     yOffset = yOffset - 25
     
     -- Enable checkbox (master toggle)
@@ -346,6 +347,34 @@ local function BuildCurrentExpansionFilterOptions(parent, yOffset)
     return yOffset
 end
 
+-- Build UI for Auto Role Queue module
+local function BuildAutoRoleQueueOptions(parent, yOffset)
+    local settings = JT:GetModuleSettings("AutoRoleQueue")
+    if not settings then return yOffset end
+    
+    -- Section header
+    local header = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    header:SetPoint("TOPLEFT", 0, yOffset)
+    header:SetText("Auto Role Queue")
+    header:SetTextColor(0.67, 0.4, 1)
+    yOffset = yOffset - 20
+    
+    -- Description
+    local desc = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    desc:SetPoint("TOPLEFT", 0, yOffset)
+    desc:SetText("Automatically accepts role checks when queuing")
+    desc:SetTextColor(0.7, 0.7, 0.7)
+    yOffset = yOffset - 20
+    
+    -- Enable checkbox
+    local enableCb = CreateCheckbox(parent, "Enabled", 0, yOffset, settings.enabled, function(checked)
+        JT:SetModuleEnabled("AutoRoleQueue", checked)
+    end)
+    yOffset = yOffset - 30
+    
+    return yOffset
+end
+
 -- Populate the options frame with module controls
 local function PopulateOptions()
     if not optionsFrame then return end
@@ -357,6 +386,8 @@ local function PopulateOptions()
     yOffset = BuildRangeIndicatorOptions(content, yOffset)
     yOffset = CreateSeparator(content, yOffset)
     yOffset = BuildCurrentExpansionFilterOptions(content, yOffset)
+    yOffset = CreateSeparator(content, yOffset)
+    yOffset = BuildAutoRoleQueueOptions(content, yOffset)
     
     -- Add more modules here in the future
 end

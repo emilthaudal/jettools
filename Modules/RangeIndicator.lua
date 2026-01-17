@@ -229,7 +229,7 @@ function RangeIndicator:Init()
     rangeAbility = GetRangeAbility()
     
     if not rangeAbility then
-        print("|cff00ff00JetTools|r: RangeIndicator - No range ability found for your class.")
+        print("|cff00aaffJetTools|r: RangeIndicator - No range ability found for your class.")
     end
 end
 

@@ -24,6 +24,9 @@ local defaults = {
             auctionHouseEnabled = true,
             auctionHouseFocusSearch = false,
         },
+        AutoRoleQueue = {
+            enabled = false,
+        },
     },
 }
 
@@ -94,7 +97,7 @@ frame:SetScript("OnEvent", function(self, event, arg1)
         JetToolsDB = JetToolsDB or {}
         DeepCopy(defaults, JetToolsDB)
         
-        print("|cff00ff00JetTools|r loaded. Type |cff00ffff/jt|r for options.")
+        print("|cff00aaffJetTools|r loaded. Type |cffaa66ff/jt|r for options.")
         
     elseif event == "PLAYER_LOGIN" then
         -- Initialize all registered modules
@@ -118,6 +121,6 @@ SlashCmdList["JETTOOLS"] = function(msg)
     if JT.ToggleOptions then
         JT:ToggleOptions()
     else
-        print("|cff00ff00JetTools|r: Options panel not loaded.")
+        print("|cff00aaffJetTools|r: Options panel not loaded.")
     end
 end
