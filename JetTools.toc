@@ -4,8 +4,13 @@
 ## Author: Jet
 ## Version: 1.0.0
 ## SavedVariablesPerCharacter: JetToolsDB
+## OptionalDeps: LibSharedMedia-3.0
 ## X-Curse-Project-ID: 1432663
 ## X-Wago-ID: YK9bE8GL
+
+# Libraries (embedded by packager)
+Libs/LibStub/LibStub.lua
+Libs/LibSharedMedia-3.0/lib.xml
 
 Core.lua
 Options.lua

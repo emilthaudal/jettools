@@ -8,7 +8,7 @@ local optionsFrame = nil
 -- Create the options frame
 local function CreateOptionsFrame()
     local frame = CreateFrame("Frame", "JetToolsOptionsFrame", UIParent, "BackdropTemplate")
-    frame:SetSize(300, 450)
+    frame:SetSize(300, 440)
     frame:SetPoint("CENTER")
     frame:SetBackdrop({
         bgFile = "Interface/Tooltips/UI-Tooltip-Background",
@@ -99,6 +99,162 @@ local function CreateSlider(parent, label, x, y, min, max, step, value, onChange
     return sliderFrame
 end
 
+-- Create a horizontal separator line
+local function CreateSeparator(parent, yOffset)
+    local separator = parent:CreateTexture(nil, "ARTWORK")
+    separator:SetPoint("TOPLEFT", 0, yOffset - 5)
+    separator:SetSize(270, 1)
+    separator:SetColorTexture(0.4, 0.4, 0.4, 0.8)
+    return yOffset - 15
+end
+
+-- Create a scrollable dropdown
+local function CreateDropdown(parent, label, x, y, width, options, selectedValue, onChange)
+    local dropdownFrame = CreateFrame("Frame", nil, parent)
+    dropdownFrame:SetSize(width, 45)
+    dropdownFrame:SetPoint("TOPLEFT", x, y)
+    
+    -- Label
+    local text = dropdownFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    text:SetPoint("TOPLEFT", 0, 0)
+    text:SetText(label)
+    
+    -- Button (shows current selection)
+    local button = CreateFrame("Button", nil, dropdownFrame, "BackdropTemplate")
+    button:SetPoint("TOPLEFT", 0, -15)
+    button:SetSize(width, 22)
+    button:SetBackdrop({
+        bgFile = "Interface/Tooltips/UI-Tooltip-Background",
+        edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
+        tile = true,
+        tileSize = 16,
+        edgeSize = 12,
+        insets = { left = 2, right = 2, top = 2, bottom = 2 }
+    })
+    button:SetBackdropColor(0.1, 0.1, 0.1, 0.9)
+    button:SetBackdropBorderColor(0.4, 0.4, 0.4)
+    
+    local buttonText = button:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    buttonText:SetPoint("LEFT", 8, 0)
+    buttonText:SetPoint("RIGHT", -20, 0)
+    buttonText:SetJustifyH("LEFT")
+    buttonText:SetText(selectedValue or "Select...")
+    button.text = buttonText
+    
+    local arrow = button:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    arrow:SetPoint("RIGHT", -5, 0)
+    arrow:SetText("▼")
+    
+    -- Dropdown list frame
+    local listFrame = CreateFrame("Frame", nil, button, "BackdropTemplate")
+    listFrame:SetPoint("TOPLEFT", button, "BOTTOMLEFT", 0, -2)
+    listFrame:SetSize(width, 150)
+    listFrame:SetBackdrop({
+        bgFile = "Interface/Tooltips/UI-Tooltip-Background",
+        edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
+        tile = true,
+        tileSize = 16,
+        edgeSize = 12,
+        insets = { left = 2, right = 2, top = 2, bottom = 2 }
+    })
+    listFrame:SetBackdropColor(0.1, 0.1, 0.1, 0.95)
+    listFrame:SetBackdropBorderColor(0.4, 0.4, 0.4)
+    listFrame:SetFrameStrata("TOOLTIP")
+    listFrame:Hide()
+    
+    -- Scroll frame
+    local scrollFrame = CreateFrame("ScrollFrame", nil, listFrame, "UIPanelScrollFrameTemplate")
+    scrollFrame:SetPoint("TOPLEFT", 5, -5)
+    scrollFrame:SetPoint("BOTTOMRIGHT", -26, 5)
+    
+    local scrollChild = CreateFrame("Frame", nil, scrollFrame)
+    scrollChild:SetSize(width - 30, 1)
+    scrollFrame:SetScrollChild(scrollChild)
+    
+    -- Populate options
+    local function RefreshOptions()
+        -- Clear existing buttons
+        for _, child in ipairs({scrollChild:GetChildren()}) do
+            child:Hide()
+            child:SetParent(nil)
+        end
+        
+        local itemHeight = 18
+        local yPos = 0
+        
+        -- Sort options alphabetically
+        local sortedOptions = {}
+        for name, _ in pairs(options) do
+            table.insert(sortedOptions, name)
+        end
+        table.sort(sortedOptions)
+        
+        for _, name in ipairs(sortedOptions) do
+            local itemBtn = CreateFrame("Button", nil, scrollChild)
+            itemBtn:SetSize(width - 35, itemHeight)
+            itemBtn:SetPoint("TOPLEFT", 0, -yPos)
+            
+            local itemText = itemBtn:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+            itemText:SetPoint("LEFT", 5, 0)
+            itemText:SetPoint("RIGHT", -5, 0)
+            itemText:SetJustifyH("LEFT")
+            itemText:SetText(name)
+            
+            local highlight = itemBtn:CreateTexture(nil, "HIGHLIGHT")
+            highlight:SetAllPoints()
+            highlight:SetColorTexture(1, 1, 1, 0.2)
+            
+            itemBtn:SetScript("OnClick", function()
+                buttonText:SetText(name)
+                listFrame:Hide()
+                onChange(name)
+            end)
+            
+            yPos = yPos + itemHeight
+        end
+        
+        scrollChild:SetHeight(math.max(yPos, 1))
+    end
+    
+    RefreshOptions()
+    
+    -- Toggle dropdown on button click
+    button:SetScript("OnClick", function()
+        if listFrame:IsShown() then
+            listFrame:Hide()
+        else
+            RefreshOptions()
+            listFrame:Show()
+        end
+    end)
+    
+    -- Close dropdown when clicking elsewhere
+    listFrame:SetScript("OnShow", function()
+        listFrame:SetScript("OnUpdate", function()
+            if not button:IsMouseOver() and not listFrame:IsMouseOver() then
+                if IsMouseButtonDown("LeftButton") then
+                    listFrame:Hide()
+                end
+            end
+        end)
+    end)
+    
+    listFrame:SetScript("OnHide", function()
+        listFrame:SetScript("OnUpdate", nil)
+    end)
+    
+    dropdownFrame.button = button
+    dropdownFrame.Refresh = function(newOptions)
+        options = newOptions
+        RefreshOptions()
+    end
+    dropdownFrame.SetValue = function(self, value)
+        buttonText:SetText(value or "Select...")
+    end
+    
+    return dropdownFrame
+end
+
 -- Build UI for Range Indicator module
 local function BuildRangeIndicatorOptions(parent, yOffset)
     local settings = JT:GetModuleSettings("RangeIndicator")
@@ -120,6 +276,15 @@ local function BuildRangeIndicatorOptions(parent, yOffset)
     -- Font size slider
     local fontSlider = CreateSlider(parent, "Font Size", 0, yOffset, 12, 48, 2, settings.fontSize, function(val)
         JT:SetModuleSetting("RangeIndicator", "fontSize", val)
+    end)
+    yOffset = yOffset - 55
+    
+    -- Font face dropdown
+    local RangeIndicator = JT.modules["RangeIndicator"]
+    local fontOptions = RangeIndicator and RangeIndicator.GetAvailableFonts and RangeIndicator:GetAvailableFonts() or {}
+    
+    local fontDropdown = CreateDropdown(parent, "Font", 0, yOffset, 200, fontOptions, settings.fontFace, function(fontName)
+        JT:SetModuleSetting("RangeIndicator", "fontFace", fontName)
     end)
     yOffset = yOffset - 55
     
@@ -151,13 +316,8 @@ local function BuildCurrentExpansionFilterOptions(parent, yOffset)
     craftHeader:SetTextColor(0.8, 0.8, 0.8)
     yOffset = yOffset - 20
     
-    local craftEnable = CreateCheckbox(parent, "Enable for Crafting Orders", 20, yOffset, settings.craftingOrdersEnabled, function(checked)
+    local craftEnable = CreateCheckbox(parent, "Enable", 20, yOffset, settings.craftingOrdersEnabled, function(checked)
         JT:SetModuleSetting("CurrentExpansionFilter", "craftingOrdersEnabled", checked)
-    end)
-    yOffset = yOffset - 25
-    
-    local craftFilter = CreateCheckbox(parent, "Set filter to Current Expansion", 20, yOffset, settings.craftingOrdersFilterValue, function(checked)
-        JT:SetModuleSetting("CurrentExpansionFilter", "craftingOrdersFilterValue", checked)
     end)
     yOffset = yOffset - 25
     
@@ -173,13 +333,8 @@ local function BuildCurrentExpansionFilterOptions(parent, yOffset)
     ahHeader:SetTextColor(0.8, 0.8, 0.8)
     yOffset = yOffset - 20
     
-    local ahEnable = CreateCheckbox(parent, "Enable for Auction House", 20, yOffset, settings.auctionHouseEnabled, function(checked)
+    local ahEnable = CreateCheckbox(parent, "Enable", 20, yOffset, settings.auctionHouseEnabled, function(checked)
         JT:SetModuleSetting("CurrentExpansionFilter", "auctionHouseEnabled", checked)
-    end)
-    yOffset = yOffset - 25
-    
-    local ahFilter = CreateCheckbox(parent, "Set filter to Current Expansion", 20, yOffset, settings.auctionHouseFilterValue, function(checked)
-        JT:SetModuleSetting("CurrentExpansionFilter", "auctionHouseFilterValue", checked)
     end)
     yOffset = yOffset - 25
     
@@ -200,6 +355,7 @@ local function PopulateOptions()
     
     -- Build options for each module
     yOffset = BuildRangeIndicatorOptions(content, yOffset)
+    yOffset = CreateSeparator(content, yOffset)
     yOffset = BuildCurrentExpansionFilterOptions(content, yOffset)
     
     -- Add more modules here in the future

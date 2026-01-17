@@ -50,7 +50,7 @@ local function SetupCraftingOrdersHook()
         local settings = JT:GetModuleSettings("CurrentExpansionFilter")
         if not settings or not settings.craftingOrdersEnabled then return end
         
-        filterDropdown.filters[Enum.AuctionHouseFilter.CurrentExpansionOnly] = settings.craftingOrdersFilterValue or false
+        filterDropdown.filters[Enum.AuctionHouseFilter.CurrentExpansionOnly] = true
         filterDropdown:ValidateResetState()
         FocusSearchBar(searchBox, settings.craftingOrdersFocusSearch)
     end
@@ -83,7 +83,7 @@ local function SetupAuctionHouseHook()
         local settings = JT:GetModuleSettings("CurrentExpansionFilter")
         if not settings or not settings.auctionHouseEnabled then return end
         
-        searchBar.FilterButton.filters[Enum.AuctionHouseFilter.CurrentExpansionOnly] = settings.auctionHouseFilterValue or false
+        searchBar.FilterButton.filters[Enum.AuctionHouseFilter.CurrentExpansionOnly] = true
         searchBar:UpdateClearFiltersButton()
         FocusSearchBar(searchBox, settings.auctionHouseFocusSearch)
     end
