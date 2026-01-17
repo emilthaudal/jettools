@@ -26,7 +26,6 @@ SavedVariables/
 
 # Packager/Release files
 .release/
-.pkgmeta
 *.zip
 
 # BigWigs packager
