@@ -8,7 +8,7 @@ local optionsFrame = nil
 -- Create the options frame
 local function CreateOptionsFrame()
     local frame = CreateFrame("Frame", "JetToolsOptionsFrame", UIParent, "BackdropTemplate")
-    frame:SetSize(300, 250)
+    frame:SetSize(300, 450)
     frame:SetPoint("CENTER")
     frame:SetBackdrop({
         bgFile = "Interface/Tooltips/UI-Tooltip-Background",
@@ -126,6 +126,71 @@ local function BuildRangeIndicatorOptions(parent, yOffset)
     return yOffset
 end
 
+-- Build UI for Current Expansion Filter module
+local function BuildCurrentExpansionFilterOptions(parent, yOffset)
+    local settings = JT:GetModuleSettings("CurrentExpansionFilter")
+    if not settings then return yOffset end
+    
+    -- Section header
+    local header = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    header:SetPoint("TOPLEFT", 0, yOffset)
+    header:SetText("Current Expansion Filter")
+    header:SetTextColor(1, 0.82, 0)
+    yOffset = yOffset - 25
+    
+    -- Enable checkbox (master toggle)
+    local enableCb = CreateCheckbox(parent, "Enabled", 0, yOffset, settings.enabled, function(checked)
+        JT:SetModuleEnabled("CurrentExpansionFilter", checked)
+    end)
+    yOffset = yOffset - 30
+    
+    -- Crafting Orders subsection
+    local craftHeader = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    craftHeader:SetPoint("TOPLEFT", 10, yOffset)
+    craftHeader:SetText("Crafting Orders")
+    craftHeader:SetTextColor(0.8, 0.8, 0.8)
+    yOffset = yOffset - 20
+    
+    local craftEnable = CreateCheckbox(parent, "Enable for Crafting Orders", 20, yOffset, settings.craftingOrdersEnabled, function(checked)
+        JT:SetModuleSetting("CurrentExpansionFilter", "craftingOrdersEnabled", checked)
+    end)
+    yOffset = yOffset - 25
+    
+    local craftFilter = CreateCheckbox(parent, "Set filter to Current Expansion", 20, yOffset, settings.craftingOrdersFilterValue, function(checked)
+        JT:SetModuleSetting("CurrentExpansionFilter", "craftingOrdersFilterValue", checked)
+    end)
+    yOffset = yOffset - 25
+    
+    local craftFocus = CreateCheckbox(parent, "Auto-focus search bar", 20, yOffset, settings.craftingOrdersFocusSearch, function(checked)
+        JT:SetModuleSetting("CurrentExpansionFilter", "craftingOrdersFocusSearch", checked)
+    end)
+    yOffset = yOffset - 30
+    
+    -- Auction House subsection
+    local ahHeader = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    ahHeader:SetPoint("TOPLEFT", 10, yOffset)
+    ahHeader:SetText("Auction House")
+    ahHeader:SetTextColor(0.8, 0.8, 0.8)
+    yOffset = yOffset - 20
+    
+    local ahEnable = CreateCheckbox(parent, "Enable for Auction House", 20, yOffset, settings.auctionHouseEnabled, function(checked)
+        JT:SetModuleSetting("CurrentExpansionFilter", "auctionHouseEnabled", checked)
+    end)
+    yOffset = yOffset - 25
+    
+    local ahFilter = CreateCheckbox(parent, "Set filter to Current Expansion", 20, yOffset, settings.auctionHouseFilterValue, function(checked)
+        JT:SetModuleSetting("CurrentExpansionFilter", "auctionHouseFilterValue", checked)
+    end)
+    yOffset = yOffset - 25
+    
+    local ahFocus = CreateCheckbox(parent, "Auto-focus search bar", 20, yOffset, settings.auctionHouseFocusSearch, function(checked)
+        JT:SetModuleSetting("CurrentExpansionFilter", "auctionHouseFocusSearch", checked)
+    end)
+    yOffset = yOffset - 30
+    
+    return yOffset
+end
+
 -- Populate the options frame with module controls
 local function PopulateOptions()
     if not optionsFrame then return end
@@ -135,6 +200,7 @@ local function PopulateOptions()
     
     -- Build options for each module
     yOffset = BuildRangeIndicatorOptions(content, yOffset)
+    yOffset = BuildCurrentExpansionFilterOptions(content, yOffset)
     
     -- Add more modules here in the future
 end

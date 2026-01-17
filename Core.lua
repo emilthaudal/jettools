@@ -16,6 +16,15 @@ local defaults = {
             enabled = true,
             fontSize = 32,
         },
+        CurrentExpansionFilter = {
+            enabled = true,
+            craftingOrdersEnabled = true,
+            craftingOrdersFilterValue = true,
+            craftingOrdersFocusSearch = false,
+            auctionHouseEnabled = true,
+            auctionHouseFilterValue = true,
+            auctionHouseFocusSearch = false,
+        },
     },
 }
 
