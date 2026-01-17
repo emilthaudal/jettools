@@ -24,6 +24,9 @@ local defaults = {
             auctionHouseEnabled = true,
             auctionHouseFocusSearch = false,
         },
+        AutoRoleQueue = {
+            enabled = false,
+        },
     },
 }
 

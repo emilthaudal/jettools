@@ -8,7 +8,7 @@ local optionsFrame = nil
 -- Create the options frame
 local function CreateOptionsFrame()
     local frame = CreateFrame("Frame", "JetToolsOptionsFrame", UIParent, "BackdropTemplate")
-    frame:SetSize(300, 440)
+    frame:SetSize(300, 500)
     frame:SetPoint("CENTER")
     frame:SetBackdrop({
         bgFile = "Interface/Tooltips/UI-Tooltip-Background",
@@ -346,6 +346,34 @@ local function BuildCurrentExpansionFilterOptions(parent, yOffset)
     return yOffset
 end
 
+-- Build UI for Auto Role Queue module
+local function BuildAutoRoleQueueOptions(parent, yOffset)
+    local settings = JT:GetModuleSettings("AutoRoleQueue")
+    if not settings then return yOffset end
+    
+    -- Section header
+    local header = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    header:SetPoint("TOPLEFT", 0, yOffset)
+    header:SetText("Auto Role Queue")
+    header:SetTextColor(1, 0.82, 0)
+    yOffset = yOffset - 20
+    
+    -- Description
+    local desc = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    desc:SetPoint("TOPLEFT", 0, yOffset)
+    desc:SetText("Automatically accepts role checks when queuing")
+    desc:SetTextColor(0.7, 0.7, 0.7)
+    yOffset = yOffset - 20
+    
+    -- Enable checkbox
+    local enableCb = CreateCheckbox(parent, "Enabled", 0, yOffset, settings.enabled, function(checked)
+        JT:SetModuleEnabled("AutoRoleQueue", checked)
+    end)
+    yOffset = yOffset - 30
+    
+    return yOffset
+end
+
 -- Populate the options frame with module controls
 local function PopulateOptions()
     if not optionsFrame then return end
@@ -357,6 +385,8 @@ local function PopulateOptions()
     yOffset = BuildRangeIndicatorOptions(content, yOffset)
     yOffset = CreateSeparator(content, yOffset)
     yOffset = BuildCurrentExpansionFilterOptions(content, yOffset)
+    yOffset = CreateSeparator(content, yOffset)
+    yOffset = BuildAutoRoleQueueOptions(content, yOffset)
     
     -- Add more modules here in the future
 end
