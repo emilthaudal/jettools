@@ -8,7 +8,7 @@ local optionsFrame = nil
 -- Create the options frame
 local function CreateOptionsFrame()
     local frame = CreateFrame("Frame", "JetToolsOptionsFrame", UIParent, "BackdropTemplate")
-    frame:SetSize(300, 500)
+    frame:SetSize(300, 530)
     frame:SetPoint("CENTER")
     frame:SetBackdrop({
         bgFile = "Interface/Tooltips/UI-Tooltip-Background",
