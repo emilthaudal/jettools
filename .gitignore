@@ -38,7 +38,7 @@ SavedVariables/
 
 # Libs that get packaged (if using externals)
 # Uncomment if you use BigWigs packager with externals
-# Libs/
+Libs/
 
 # Backup files
 *.bak
