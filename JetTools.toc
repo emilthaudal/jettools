@@ -5,6 +5,7 @@
 ## Version: 1.0.0
 ## SavedVariablesPerCharacter: JetToolsDB
 ## X-Curse-Project-ID: 1432663
+## X-Wago-ID: YK9bE8GL
 
 Core.lua
 Options.lua
