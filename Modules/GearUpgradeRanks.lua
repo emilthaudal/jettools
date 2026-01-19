@@ -201,7 +201,7 @@ local function OnTooltipSetItem(tooltip, data)
             local maxIlvl = tierData.maxIlvl
             
             if minIlvl and maxIlvl and itemLevel >= minIlvl and itemLevel <= maxIlvl then
-                local tierHexColorMarkup = tierData.color:GenerateHexColorMarkup()
+                local tierHexColorMarkup = tierData.color.hex
                 local rangeHexColorMarkup = CreateColor(0.6, 0.6, 0.6):GenerateHexColorMarkup() -- Grey
 
                 local newLineText = string.format(
@@ -223,7 +223,7 @@ local function OnTooltipSetItem(tooltip, data)
             if tierData.crest then
                 local crest = tierData.crest
                 local crestName = crest.shortName
-                local crestName_colored = crest.color:WrapTextInColorCode(crestName)
+                local crestName_colored = crest.color.hex .. crestName .. "|r"
                 local achievement = crest.achievement and select(13, GetAchievementInfo(crest.achievement))
                 
                 -- Add atlas icon
