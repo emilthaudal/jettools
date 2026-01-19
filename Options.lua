@@ -8,7 +8,7 @@ local optionsFrame = nil
 -- Create the options frame
 local function CreateOptionsFrame()
     local frame = CreateFrame("Frame", "JetToolsOptionsFrame", UIParent, "BackdropTemplate")
-    frame:SetSize(300, 530)
+    frame:SetSize(300, 1250)
     frame:SetPoint("CENTER")
     frame:SetBackdrop({
         bgFile = "Interface/Tooltips/UI-Tooltip-Background",
@@ -106,6 +106,49 @@ local function CreateSeparator(parent, yOffset)
     separator:SetSize(270, 1)
     separator:SetColorTexture(0.3, 0.4, 0.6, 0.8)
     return yOffset - 15
+end
+
+-- Create a text input field
+local function CreateTextInput(parent, label, x, y, width, value, onChange)
+    local inputFrame = CreateFrame("Frame", nil, parent)
+    inputFrame:SetSize(width, 40)
+    inputFrame:SetPoint("TOPLEFT", x, y)
+    
+    -- Label
+    local text = inputFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    text:SetPoint("TOPLEFT", 0, 0)
+    text:SetText(label)
+    
+    -- EditBox with backdrop
+    local editBox = CreateFrame("EditBox", nil, inputFrame, "BackdropTemplate")
+    editBox:SetPoint("TOPLEFT", 0, -15)
+    editBox:SetSize(width, 22)
+    editBox:SetBackdrop({
+        bgFile = "Interface/Tooltips/UI-Tooltip-Background",
+        edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
+        tile = true,
+        tileSize = 16,
+        edgeSize = 12,
+        insets = { left = 2, right = 2, top = 2, bottom = 2 }
+    })
+    editBox:SetBackdropColor(0.1, 0.1, 0.1, 0.9)
+    editBox:SetBackdropBorderColor(0.3, 0.4, 0.6)
+    editBox:SetFontObject("GameFontHighlightSmall")
+    editBox:SetAutoFocus(false)
+    editBox:SetText(value or "")
+    editBox:SetTextInsets(8, 8, 0, 0)
+    
+    editBox:SetScript("OnEnterPressed", function(self)
+        self:ClearFocus()
+        onChange(self:GetText())
+    end)
+    
+    editBox:SetScript("OnEscapePressed", function(self)
+        self:ClearFocus()
+    end)
+    
+    inputFrame.editBox = editBox
+    return inputFrame
 end
 
 -- Create a scrollable dropdown
@@ -375,6 +418,192 @@ local function BuildAutoRoleQueueOptions(parent, yOffset)
     return yOffset
 end
 
+-- Build UI for Character Stats module
+local function BuildCharacterStatsOptions(parent, yOffset)
+    local settings = JT:GetModuleSettings("CharacterStats")
+    if not settings then return yOffset end
+    
+    -- Section header
+    local header = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    header:SetPoint("TOPLEFT", 0, yOffset)
+    header:SetText("Character Stats")
+    header:SetTextColor(0.67, 0.4, 1)
+    yOffset = yOffset - 20
+    
+    -- Description
+    local desc = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    desc:SetPoint("TOPLEFT", 0, yOffset)
+    desc:SetText("Show item levels, enchants, and gems on gear")
+    desc:SetTextColor(0.7, 0.7, 0.7)
+    yOffset = yOffset - 20
+    
+    -- Enable checkbox
+    local enableCb = CreateCheckbox(parent, "Enabled", 0, yOffset, settings.enabled, function(checked)
+        JT:SetModuleEnabled("CharacterStats", checked)
+    end)
+    yOffset = yOffset - 30
+    
+    return yOffset
+end
+
+-- Build UI for Focus Castbar module
+local function BuildFocusCastbarOptions(parent, yOffset)
+    local settings = JT:GetModuleSettings("FocusCastbar")
+    if not settings then return yOffset end
+    
+    -- Section header
+    local header = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    header:SetPoint("TOPLEFT", 0, yOffset)
+    header:SetText("Focus Castbar")
+    header:SetTextColor(0.67, 0.4, 1)
+    yOffset = yOffset - 20
+    
+    -- Description
+    local desc = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    desc:SetPoint("TOPLEFT", 0, yOffset)
+    desc:SetText("Enhanced focus castbar with interrupt tracking")
+    desc:SetTextColor(0.7, 0.7, 0.7)
+    yOffset = yOffset - 20
+    
+    -- Enable checkbox
+    local enableCb = CreateCheckbox(parent, "Enabled", 0, yOffset, settings.enabled, function(checked)
+        JT:SetModuleEnabled("FocusCastbar", checked)
+    end)
+    yOffset = yOffset - 30
+    
+    -- Position X slider
+    local posXSlider = CreateSlider(parent, "Position X", 0, yOffset, -500, 500, 10, settings.positionX, function(val)
+        JT:SetModuleSetting("FocusCastbar", "positionX", val)
+    end)
+    yOffset = yOffset - 50
+    
+    -- Position Y slider
+    local posYSlider = CreateSlider(parent, "Position Y", 0, yOffset, -500, 500, 10, settings.positionY, function(val)
+        JT:SetModuleSetting("FocusCastbar", "positionY", val)
+    end)
+    yOffset = yOffset - 50
+    
+    return yOffset
+end
+
+-- Build UI for Focus Marker Announcement module
+local function BuildFocusMarkerAnnouncementOptions(parent, yOffset)
+    local settings = JT:GetModuleSettings("FocusMarkerAnnouncement")
+    if not settings then return yOffset end
+    
+    -- Section header
+    local header = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    header:SetPoint("TOPLEFT", 0, yOffset)
+    header:SetText("Focus Marker Announcement")
+    header:SetTextColor(0.67, 0.4, 1)
+    yOffset = yOffset - 20
+    
+    -- Description
+    local desc = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    desc:SetPoint("TOPLEFT", 0, yOffset)
+    desc:SetText("Announces your focus marker to party on ready check")
+    desc:SetTextColor(0.7, 0.7, 0.7)
+    yOffset = yOffset - 20
+    
+    -- Enable checkbox
+    local enableCb = CreateCheckbox(parent, "Enabled", 0, yOffset, settings.enabled, function(checked)
+        JT:SetModuleEnabled("FocusMarkerAnnouncement", checked)
+    end)
+    yOffset = yOffset - 30
+    
+    -- Macro name input
+    local macroInput = CreateTextInput(parent, "Macro Name", 0, yOffset, 150, settings.macroName, function(val)
+        JT:SetModuleSetting("FocusMarkerAnnouncement", "macroName", val)
+    end)
+    yOffset = yOffset - 40
+    
+    return yOffset
+end
+
+-- Build UI for Gear Upgrade Ranks module
+local function BuildGearUpgradeRanksOptions(parent, yOffset)
+    local settings = JT:GetModuleSettings("GearUpgradeRanks")
+    if not settings then return yOffset end
+    
+    -- Section header
+    local header = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    header:SetPoint("TOPLEFT", 0, yOffset)
+    header:SetText("Gear Upgrade Ranks")
+    header:SetTextColor(0.67, 0.4, 1)
+    yOffset = yOffset - 20
+    
+    -- Description
+    local desc = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    desc:SetPoint("TOPLEFT", 0, yOffset)
+    desc:SetText("Better formatted upgrade ranks and crests in tooltips")
+    desc:SetTextColor(0.7, 0.7, 0.7)
+    yOffset = yOffset - 20
+    
+    -- Enable checkbox
+    local enableCb = CreateCheckbox(parent, "Enabled", 0, yOffset, settings.enabled, function(checked)
+        JT:SetModuleEnabled("GearUpgradeRanks", checked)
+    end)
+    yOffset = yOffset - 30
+    
+    return yOffset
+end
+
+-- Build UI for Character Stat Formatting module
+local function BuildCharacterStatFormattingOptions(parent, yOffset)
+    local settings = JT:GetModuleSettings("CharacterStatFormatting")
+    if not settings then return yOffset end
+    
+    -- Section header
+    local header = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    header:SetPoint("TOPLEFT", 0, yOffset)
+    header:SetText("Character Stat Formatting")
+    header:SetTextColor(0.67, 0.4, 1)
+    yOffset = yOffset - 20
+    
+    -- Description
+    local desc = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    desc:SetPoint("TOPLEFT", 0, yOffset)
+    desc:SetText("Detailed stats with raw numbers and %")
+    desc:SetTextColor(0.7, 0.7, 0.7)
+    yOffset = yOffset - 20
+    
+    -- Enable checkbox
+    local enableCb = CreateCheckbox(parent, "Enabled", 0, yOffset, settings.enabled, function(checked)
+        JT:SetModuleEnabled("CharacterStatFormatting", checked)
+    end)
+    yOffset = yOffset - 30
+    
+    return yOffset
+end
+
+-- Build UI for Slash Commands module
+local function BuildSlashCommandsOptions(parent, yOffset)
+    local settings = JT:GetModuleSettings("SlashCommands")
+    if not settings then return yOffset end
+    
+    -- Section header
+    local header = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    header:SetPoint("TOPLEFT", 0, yOffset)
+    header:SetText("Slash Commands")
+    header:SetTextColor(0.67, 0.4, 1)
+    yOffset = yOffset - 20
+    
+    -- Description
+    local desc = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    desc:SetPoint("TOPLEFT", 0, yOffset)
+    desc:SetText("Adds /rl (reload) and /wa (cooldowns)")
+    desc:SetTextColor(0.7, 0.7, 0.7)
+    yOffset = yOffset - 20
+    
+    -- Enable checkbox
+    local enableCb = CreateCheckbox(parent, "Enabled", 0, yOffset, settings.enabled, function(checked)
+        JT:SetModuleEnabled("SlashCommands", checked)
+    end)
+    yOffset = yOffset - 30
+    
+    return yOffset
+end
+
 -- Populate the options frame with module controls
 local function PopulateOptions()
     if not optionsFrame then return end
@@ -388,6 +617,18 @@ local function PopulateOptions()
     yOffset = BuildCurrentExpansionFilterOptions(content, yOffset)
     yOffset = CreateSeparator(content, yOffset)
     yOffset = BuildAutoRoleQueueOptions(content, yOffset)
+    yOffset = CreateSeparator(content, yOffset)
+    yOffset = BuildCharacterStatsOptions(content, yOffset)
+    yOffset = CreateSeparator(content, yOffset)
+    yOffset = BuildFocusCastbarOptions(content, yOffset)
+    yOffset = CreateSeparator(content, yOffset)
+    yOffset = BuildFocusMarkerAnnouncementOptions(content, yOffset)
+    yOffset = CreateSeparator(content, yOffset)
+    yOffset = BuildGearUpgradeRanksOptions(content, yOffset)
+    yOffset = CreateSeparator(content, yOffset)
+    yOffset = BuildCharacterStatFormattingOptions(content, yOffset)
+    yOffset = CreateSeparator(content, yOffset)
+    yOffset = BuildSlashCommandsOptions(content, yOffset)
     
     -- Add more modules here in the future
 end

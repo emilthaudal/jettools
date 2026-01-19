@@ -27,6 +27,27 @@ local defaults = {
         AutoRoleQueue = {
             enabled = false,
         },
+        CharacterStats = {
+            enabled = true,
+        },
+        FocusCastbar = {
+            enabled = true,
+            positionX = 0,
+            positionY = -50,
+        },
+        FocusMarkerAnnouncement = {
+            enabled = false,
+            macroName = "focus",
+        },
+        GearUpgradeRanks = {
+            enabled = true,
+        },
+        CharacterStatFormatting = {
+            enabled = true,
+        },
+        SlashCommands = {
+            enabled = true,
+        },
     },
 }
 
