@@ -110,11 +110,11 @@ local UPGRADE_TIERS = IS_MIDNIGHT
         },
         {
             name = "Hero",
-            minIlvl = 694,
-            maxIlvl = 710,
-            maxUpgrade = 6,
+            minIlvl = 693,
+            maxIlvl = 718,
+            maxUpgrade = 8,
             color = ITEM_QUALITY_COLORS[4], -- Epic
-            crestLevels = { [1] = CRESTS[3], [4] = CRESTS[4], [6] = nil },
+            crestLevels = { [1] = CRESTS[3], [4] = CRESTS[4], [8] = nil },
         },
         {
             name = "Myth",
@@ -143,29 +143,34 @@ local function GetCrestForLevel(crestLevels, current, maxUpgrade)
     return selectedCrest
 end
 
--- Helper: Get tier data based on item level and upgrade level
-local function GetUpgradeTierData(ilvl, current, total)
+-- Helper: Get tier data based on item level, upgrade level, and name
+local function GetUpgradeTierData(ilvl, current, total, tierName)
+    local bestMatch = nil
+    
     for _, tier in ipairs(UPGRADE_TIERS) do
         if ilvl >= tier.minIlvl and ilvl <= tier.maxIlvl and total == tier.maxUpgrade then
-            -- Calculate expected ilvl for current upgrade level
-            -- This validates that the item actually belongs to this tier at this specific upgrade step
-            local step = (tier.maxIlvl - tier.minIlvl) / (tier.maxUpgrade - 1)
-            local expectedIlvl = tier.minIlvl + (current - 1) * step
-            local diff = math.abs(ilvl - expectedIlvl)
-
-            -- Allow for small rounding errors
-            if diff <= step then
-                return {
-                    name = tier.name,
-                    minIlvl = tier.minIlvl,
-                    maxIlvl = tier.maxIlvl,
-                    color = tier.color,
-                    crest = GetCrestForLevel(tier.crestLevels, current, tier.maxUpgrade),
-                }
+            -- Found a mathematical match
+            local match = {
+                name = tier.name,
+                minIlvl = tier.minIlvl,
+                maxIlvl = tier.maxIlvl,
+                color = tier.color,
+                crest = GetCrestForLevel(tier.crestLevels, current, tier.maxUpgrade),
+            }
+            
+            -- If names match exactly, return immediately (Highest Priority)
+            if tier.name == tierName then
+                return match
+            end
+            
+            -- Otherwise store as fallback
+            if not bestMatch then
+                bestMatch = match
             end
         end
     end
-    return nil
+    
+    return bestMatch
 end
 
 -- Tooltip Hook Function
@@ -192,7 +197,7 @@ local function OnTooltipSetItem(tooltip, data)
             local tierName, current, total =
                 text:match(ITEM_UPGRADE_TOOLTIP_FORMAT_STRING:gsub("%%s %%d/%%d", "(%%D+) (%%d+)/(%%d+)"))
 
-            local tierData = GetUpgradeTierData(tonumber(itemLevel), tonumber(current), tonumber(total))
+            local tierData = GetUpgradeTierData(tonumber(itemLevel), tonumber(current), tonumber(total), tierName)
             if not tierData then return end
 
             -- 1. Modify the main upgrade text line
