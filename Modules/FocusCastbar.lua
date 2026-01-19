@@ -26,6 +26,8 @@ local CLASS_INTERRUPTS = {
 
 -- Module state
 local isEnabled = false
+local isPreviewing = false
+local previewTimer = 0
 local castbarFrame = nil
 local interruptInfo = nil  -- { spellId, cooldown } for current class
 local interruptOnCooldown = false
@@ -161,6 +163,74 @@ local function CreateCastbarFrame()
     -- Store state
     castbarFrame.isInterruptable = false
     castbarFrame.interruptOnCooldown = false
+end
+
+-- Preview mode loop
+local function PreviewLoop()
+    if not isPreviewing or not castbarFrame then return end
+    
+    local duration = 2.5
+    local currentTime = GetTime()
+    local startTime = currentTime
+    local endTime = startTime + duration
+    
+    -- Set up visual state
+    castbarFrame:Show()
+    castbarFrame.Icon:SetTexture(136071) -- Polymorph icon
+    castbarFrame.SpellNameText:SetText("Polymorph (Preview)")
+    castbarFrame.CastBar:SetMinMaxValues(0, duration)
+    
+    -- Reset state for cycle
+    castbarFrame.isInterruptable = true
+    castbarFrame.interruptOnCooldown = false
+    
+    -- Simulation update loop
+    castbarFrame:SetScript("OnUpdate", function(self, elapsed)
+        if not isPreviewing then
+            self:SetScript("OnUpdate", nil)
+            return
+        end
+        
+        local now = GetTime()
+        local progress = now - startTime
+        
+        if progress >= duration then
+            -- Loop
+            startTime = now
+            endTime = startTime + duration
+            progress = 0
+            
+            -- Toggle interruptible state for variety
+            castbarFrame.isInterruptable = not castbarFrame.isInterruptable
+        end
+        
+        self.CastBar:SetValue(progress)
+        self.TimeText:SetFormattedText("%.1f/%.1f", progress, duration)
+        
+        -- Cycle colors based on "fake" state
+        if castbarFrame.isInterruptable then
+            self.CastBar:SetStatusBarColor(unpack(COLOR_INTERRUPTABLE))
+        else
+            self.CastBar:SetStatusBarColor(unpack(COLOR_NOT_INTERRUPTABLE))
+        end
+    end)
+end
+
+-- Toggle preview mode
+function FocusCastbar:TogglePreview()
+    if isPreviewing then
+        isPreviewing = false
+        if castbarFrame then
+            castbarFrame:Hide()
+            castbarFrame:SetScript("OnUpdate", nil) -- Stop the loop
+        end
+        -- Re-initialize hooks to restore normal behavior if needed
+        -- (The normal OnUpdate is on FocusFrame.spellbar, not our frame, so we are safe)
+    else
+        if not castbarFrame then CreateCastbarFrame() end
+        isPreviewing = true
+        PreviewLoop()
+    end
 end
 
 -- Update the castbar color based on state

@@ -151,6 +151,20 @@ local function CreateTextInput(parent, label, x, y, width, value, onChange)
     return inputFrame
 end
 
+-- Create a simple push button
+local function CreateButton(parent, label, x, y, width, onClick)
+    local btn = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
+    btn:SetPoint("TOPLEFT", x, y)
+    btn:SetSize(width, 24)
+    btn:SetText(label)
+    
+    btn:SetScript("OnClick", function(self)
+        if onClick then onClick(self) end
+    end)
+    
+    return btn
+end
+
 -- Create a scrollable dropdown
 local function CreateDropdown(parent, label, x, y, width, options, selectedValue, onChange)
     local dropdownFrame = CreateFrame("Frame", nil, parent)
@@ -482,6 +496,15 @@ local function BuildFocusCastbarOptions(parent, yOffset)
         JT:SetModuleSetting("FocusCastbar", "positionY", val)
     end)
     yOffset = yOffset - 50
+    
+    -- Preview Button
+    local previewBtn = CreateButton(parent, "Test / Preview Mode", 0, yOffset, 160, function()
+        local module = JT.modules["FocusCastbar"]
+        if module and module.TogglePreview then
+            module:TogglePreview()
+        end
+    end)
+    yOffset = yOffset - 40
     
     return yOffset
 end
