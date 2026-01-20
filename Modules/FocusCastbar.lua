@@ -6,6 +6,18 @@ local addonName, JT = ...
 local FocusCastbar = {}
 JT:RegisterModule("FocusCastbar", FocusCastbar)
 
+-- Get options configuration
+function FocusCastbar:GetOptions()
+    return {
+        { type = "header", label = "Focus Castbar" },
+        { type = "description", text = "Enhanced focus target castbar with interrupt tracking" },
+        { type = "checkbox", label = "Enabled", key = "enabled", default = true },
+        { type = "slider", label = "Position X", key = "positionX", min = -500, max = 500, step = 10, default = 0 },
+        { type = "slider", label = "Position Y", key = "positionY", min = -500, max = 500, step = 10, default = -50 },
+        { type = "button", label = "Test / Preview Mode", func = function() self:TogglePreview() end, width = 160 }
+    }
+end
+
 -- Class interrupt spell mapping
 -- spellId: the interrupt spell ID
 -- cooldown: base cooldown in seconds

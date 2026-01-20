@@ -6,6 +6,15 @@ local addonName, JT = ...
 local CharacterStats = {}
 JT:RegisterModule("CharacterStats", CharacterStats)
 
+-- Get options configuration
+function CharacterStats:GetOptions()
+    return {
+        { type = "header", label = "Character Stats" },
+        { type = "description", text = "Show item levels, enchants, and gems on gear" },
+        { type = "checkbox", label = "Enabled", key = "enabled", default = true }
+    }
+end
+
 -- Module state
 local isEnabled = false
 local characterOpen = false

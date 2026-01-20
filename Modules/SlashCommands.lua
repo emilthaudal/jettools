@@ -6,6 +6,15 @@ local addonName, JT = ...
 local SlashCommands = {}
 JT:RegisterModule("SlashCommands", SlashCommands)
 
+-- Get options configuration
+function SlashCommands:GetOptions()
+    return {
+        { type = "header", label = "Slash Commands" },
+        { type = "description", text = "Adds /rl (reload) and /wa (cooldowns)" },
+        { type = "checkbox", label = "Enabled", key = "enabled", default = true }
+    }
+end
+
 -- Module state
 local isEnabled = false
 

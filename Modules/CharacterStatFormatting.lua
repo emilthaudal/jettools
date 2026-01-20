@@ -6,6 +6,15 @@ local addonName, JT = ...
 local CharacterStatFormatting = {}
 JT:RegisterModule("CharacterStatFormatting", CharacterStatFormatting)
 
+-- Get options configuration
+function CharacterStatFormatting:GetOptions()
+    return {
+        { type = "header", label = "Character Stat Formatting" },
+        { type = "description", text = "Detailed stats with raw numbers and %" },
+        { type = "checkbox", label = "Enabled", key = "enabled", default = true }
+    }
+end
+
 -- Module state
 local isEnabled = false
 

@@ -6,6 +6,15 @@ local addonName, JT = ...
 local GearUpgradeRanks = {}
 JT:RegisterModule("GearUpgradeRanks", GearUpgradeRanks)
 
+-- Get options configuration
+function GearUpgradeRanks:GetOptions()
+    return {
+        { type = "header", label = "Gear Upgrade Ranks" },
+        { type = "description", text = "Better formatted upgrade ranks and crests in tooltips" },
+        { type = "checkbox", label = "Enabled", key = "enabled", default = true }
+    }
+end
+
 -- Module state
 local isEnabled = false
 local initialized = false

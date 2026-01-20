@@ -6,6 +6,16 @@ local addonName, JT = ...
 local FocusMarkerAnnouncement = {}
 JT:RegisterModule("FocusMarkerAnnouncement", FocusMarkerAnnouncement)
 
+-- Get options configuration
+function FocusMarkerAnnouncement:GetOptions()
+    return {
+        { type = "header", label = "Focus Marker Announcement" },
+        { type = "description", text = "Announces your focus marker to party on ready check" },
+        { type = "checkbox", label = "Enabled", key = "enabled", default = false },
+        { type = "input", label = "Macro Name", key = "macroName", width = 150, default = "focus" }
+    }
+end
+
 local isEnabled = false
 
 -- Extract marker number from configured macro
