@@ -14,7 +14,7 @@ function FocusCastbar:GetOptions()
         { type = "checkbox", label = "Enabled", key = "enabled", default = true },
         { type = "slider", label = "Position X", key = "positionX", min = -500, max = 500, step = 10, default = 0 },
         { type = "slider", label = "Position Y", key = "positionY", min = -500, max = 500, step = 10, default = -50 },
-        { type = "button", label = "Test / Preview Mode", func = function() self:TogglePreview() end, width = 160 }
+        { type = "button", label = "Test / Preview Mode", func = function() FocusCastbar:TogglePreview() end, width = 160 }
     }
 end
 
@@ -80,7 +80,7 @@ local function CreateCastbarFrame()
     
     -- Cast bar (StatusBar)
     castbarFrame.CastBar = CreateFrame("StatusBar", nil, castbarFrame)
-    castbarFrame.CastBar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
+    castbarFrame.CastBar:SetStatusBarTexture("Interface\\Buttons\\WHITE8x8")
     castbarFrame.CastBar:SetSize(BAR_WIDTH - ICON_SIZE, BAR_HEIGHT)
     
     do
@@ -311,6 +311,17 @@ end
 
 -- Event handler
 local function OnEvent(self, event, ...)
+    -- Handle hook initialization events even when not enabled
+    if event == "PLAYER_FOCUS_CHANGED" or event == "PLAYER_ENTERING_WORLD" then
+        if not hooksInitialized then
+            -- Small delay to ensure FocusFrame is fully loaded
+            C_Timer.After(0.1, function()
+                InitializeHooks()
+            end)
+        end
+        return
+    end
+    
     if not isEnabled then return end
     
     if event == "UNIT_SPELLCAST_SUCCEEDED" then
@@ -444,6 +455,10 @@ function FocusCastbar:Init()
     -- Get player's interrupt spell
     local _, playerClass = UnitClass("player")
     interruptInfo = CLASS_INTERRUPTS[playerClass]
+    
+    -- Register events for hook initialization retry
+    eventFrame:RegisterEvent("PLAYER_FOCUS_CHANGED")
+    eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
     
     -- Initialize hooks (they check isEnabled before doing work)
     InitializeHooks()
