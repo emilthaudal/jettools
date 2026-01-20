@@ -11,7 +11,7 @@ local MODULE_ORDER = {
     "RangeIndicator",
     "CurrentExpansionFilter",
     "AutoRoleQueue",
-    "CharacterStats",
+    "CharacterSheet",
     "FocusCastbar",
     "FocusMarkerAnnouncement",
     "GearUpgradeRanks",

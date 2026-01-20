@@ -1,15 +1,15 @@
--- JetTools Character Stats Module
+-- JetTools Character Sheet Module
 -- Displays item levels, enchants, and gems on character/inspect frames
 
 local addonName, JT = ...
 
-local CharacterStats = {}
-JT:RegisterModule("CharacterStats", CharacterStats)
+local CharacterSheet = {}
+JT:RegisterModule("CharacterSheet", CharacterSheet)
 
 -- Get options configuration
-function CharacterStats:GetOptions()
+function CharacterSheet:GetOptions()
     return {
-        { type = "header", label = "Character Stats" },
+        { type = "header", label = "Character Sheet" },
         { type = "description", text = "Show item levels, enchants, and gems on gear" },
         { type = "checkbox", label = "Enabled", key = "enabled", default = true }
     }
@@ -419,7 +419,7 @@ local eventFrame = CreateFrame("Frame")
 eventFrame:SetScript("OnEvent", OnEvent)
 
 -- Initialize the module (sets up hooks that persist)
-function CharacterStats:Init()
+function CharacterSheet:Init()
     -- Hook NotifyInspect to track who we're inspecting
     hooksecurefunc("NotifyInspect", function(unit)
         if not isEnabled then return end
@@ -463,7 +463,7 @@ function CharacterStats:Init()
 end
 
 -- Enable the module
-function CharacterStats:Enable()
+function CharacterSheet:Enable()
     isEnabled = true
     
     eventFrame:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
@@ -479,7 +479,7 @@ function CharacterStats:Enable()
 end
 
 -- Disable the module
-function CharacterStats:Disable()
+function CharacterSheet:Disable()
     isEnabled = false
     
     eventFrame:UnregisterAllEvents()

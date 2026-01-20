@@ -27,7 +27,7 @@ local defaults = {
         AutoRoleQueue = {
             enabled = false,
         },
-        CharacterStats = {
+        CharacterSheet = {
             enabled = true,
         },
         FocusCastbar = {
