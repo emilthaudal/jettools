@@ -6,6 +6,15 @@ local addonName, JT = ...
 local AutoRoleQueue = {}
 JT:RegisterModule("AutoRoleQueue", AutoRoleQueue)
 
+-- Get options configuration
+function AutoRoleQueue:GetOptions()
+    return {
+        { type = "header", label = "Auto Role Queue" },
+        { type = "description", text = "Automatically accepts role checks when queuing" },
+        { type = "checkbox", label = "Enabled", key = "enabled", default = false }
+    }
+end
+
 -- Module state
 local isEnabled = false
 

@@ -45,6 +45,16 @@ local function GetFontPath(fontName)
     end
 end
 
+-- Get options configuration
+function RangeIndicator:GetOptions()
+    return {
+        { type = "header", label = "Range Indicator" },
+        { type = "checkbox", label = "Enabled", key = "enabled", default = true },
+        { type = "slider", label = "Font Size", key = "fontSize", min = 12, max = 48, step = 2, default = 24 },
+        { type = "dropdown", label = "Font", key = "fontFace", options = self:GetAvailableFonts(), default = "Friz Quadrata TT" }
+    }
+end
+
 -- Class-specific range check abilities (melee abilities for accurate range)
 local CLASS_RANGE_ABILITIES = {
     WARRIOR = "Slam",

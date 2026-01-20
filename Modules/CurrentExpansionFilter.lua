@@ -7,6 +7,22 @@ local addonName, JT = ...
 local CurrentExpansionFilter = {}
 JT:RegisterModule("CurrentExpansionFilter", CurrentExpansionFilter)
 
+-- Get options configuration
+function CurrentExpansionFilter:GetOptions()
+    return {
+        { type = "header", label = "Current Expansion Filter" },
+        { type = "checkbox", label = "Enabled", key = "enabled", default = true },
+        
+        { type = "subheader", label = "Crafting Orders" },
+        { type = "checkbox", label = "Enable", key = "craftingOrdersEnabled", default = true },
+        { type = "checkbox", label = "Auto-focus search bar", key = "craftingOrdersFocusSearch", default = false },
+        
+        { type = "subheader", label = "Auction House" },
+        { type = "checkbox", label = "Enable", key = "auctionHouseEnabled", default = true },
+        { type = "checkbox", label = "Auto-focus search bar", key = "auctionHouseFocusSearch", default = false }
+    }
+end
+
 -- Module state
 local isEnabled = false
 local hookStates = {}

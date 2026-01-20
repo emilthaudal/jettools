@@ -1,14 +1,28 @@
 -- JetTools Options Panel
 -- Simple draggable frame for configuring modules
+-- Refactored to be data-driven
 
 local addonName, JT = ...
 
 local optionsFrame = nil
 
+-- Defined order for modules in the options panel
+local MODULE_ORDER = {
+    "RangeIndicator",
+    "CurrentExpansionFilter",
+    "AutoRoleQueue",
+    "CharacterSheet",
+    "FocusCastbar",
+    "FocusMarkerAnnouncement",
+    "GearUpgradeRanks",
+    "CharacterStatFormatting",
+    "SlashCommands",
+}
+
 -- Create the options frame
 local function CreateOptionsFrame()
     local frame = CreateFrame("Frame", "JetToolsOptionsFrame", UIParent, "BackdropTemplate")
-    frame:SetSize(300, 530)
+    frame:SetSize(300, 1250)
     frame:SetPoint("CENTER")
     frame:SetBackdrop({
         bgFile = "Interface/Tooltips/UI-Tooltip-Background",
@@ -106,6 +120,63 @@ local function CreateSeparator(parent, yOffset)
     separator:SetSize(270, 1)
     separator:SetColorTexture(0.3, 0.4, 0.6, 0.8)
     return yOffset - 15
+end
+
+-- Create a text input field
+local function CreateTextInput(parent, label, x, y, width, value, onChange)
+    local inputFrame = CreateFrame("Frame", nil, parent)
+    inputFrame:SetSize(width, 40)
+    inputFrame:SetPoint("TOPLEFT", x, y)
+    
+    -- Label
+    local text = inputFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    text:SetPoint("TOPLEFT", 0, 0)
+    text:SetText(label)
+    
+    -- EditBox with backdrop
+    local editBox = CreateFrame("EditBox", nil, inputFrame, "BackdropTemplate")
+    editBox:SetPoint("TOPLEFT", 0, -15)
+    editBox:SetSize(width, 22)
+    editBox:SetBackdrop({
+        bgFile = "Interface/Tooltips/UI-Tooltip-Background",
+        edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
+        tile = true,
+        tileSize = 16,
+        edgeSize = 12,
+        insets = { left = 2, right = 2, top = 2, bottom = 2 }
+    })
+    editBox:SetBackdropColor(0.1, 0.1, 0.1, 0.9)
+    editBox:SetBackdropBorderColor(0.3, 0.4, 0.6)
+    editBox:SetFontObject("GameFontHighlightSmall")
+    editBox:SetAutoFocus(false)
+    editBox:SetText(value or "")
+    editBox:SetTextInsets(8, 8, 0, 0)
+    
+    editBox:SetScript("OnEnterPressed", function(self)
+        self:ClearFocus()
+        onChange(self:GetText())
+    end)
+    
+    editBox:SetScript("OnEscapePressed", function(self)
+        self:ClearFocus()
+    end)
+    
+    inputFrame.editBox = editBox
+    return inputFrame
+end
+
+-- Create a simple push button
+local function CreateButton(parent, label, x, y, width, onClick)
+    local btn = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
+    btn:SetPoint("TOPLEFT", x, y)
+    btn:SetSize(width, 24)
+    btn:SetText(label)
+    
+    btn:SetScript("OnClick", function(self)
+        if onClick then onClick(self) end
+    end)
+    
+    return btn
 end
 
 -- Create a scrollable dropdown
@@ -256,121 +327,87 @@ local function CreateDropdown(parent, label, x, y, width, options, selectedValue
     return dropdownFrame
 end
 
--- Build UI for Range Indicator module
-local function BuildRangeIndicatorOptions(parent, yOffset)
-    local settings = JT:GetModuleSettings("RangeIndicator")
-    if not settings then return yOffset end
-    
-    -- Section header
-    local header = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    header:SetPoint("TOPLEFT", 0, yOffset)
-    header:SetText("Range Indicator")
-    header:SetTextColor(0.67, 0.4, 1)
-    yOffset = yOffset - 25
-    
-    -- Enable checkbox
-    local enableCb = CreateCheckbox(parent, "Enabled", 0, yOffset, settings.enabled, function(checked)
-        JT:SetModuleEnabled("RangeIndicator", checked)
-    end)
-    yOffset = yOffset - 30
-    
-    -- Font size slider
-    local fontSlider = CreateSlider(parent, "Font Size", 0, yOffset, 12, 48, 2, settings.fontSize, function(val)
-        JT:SetModuleSetting("RangeIndicator", "fontSize", val)
-    end)
-    yOffset = yOffset - 55
-    
-    -- Font face dropdown
-    local RangeIndicator = JT.modules["RangeIndicator"]
-    local fontOptions = RangeIndicator and RangeIndicator.GetAvailableFonts and RangeIndicator:GetAvailableFonts() or {}
-    
-    local fontDropdown = CreateDropdown(parent, "Font", 0, yOffset, 200, fontOptions, settings.fontFace, function(fontName)
-        JT:SetModuleSetting("RangeIndicator", "fontFace", fontName)
-    end)
-    yOffset = yOffset - 55
-    
-    return yOffset
-end
 
--- Build UI for Current Expansion Filter module
-local function BuildCurrentExpansionFilterOptions(parent, yOffset)
-    local settings = JT:GetModuleSettings("CurrentExpansionFilter")
-    if not settings then return yOffset end
-    
-    -- Section header
-    local header = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    header:SetPoint("TOPLEFT", 0, yOffset)
-    header:SetText("Current Expansion Filter")
-    header:SetTextColor(0.67, 0.4, 1)
-    yOffset = yOffset - 25
-    
-    -- Enable checkbox (master toggle)
-    local enableCb = CreateCheckbox(parent, "Enabled", 0, yOffset, settings.enabled, function(checked)
-        JT:SetModuleEnabled("CurrentExpansionFilter", checked)
-    end)
-    yOffset = yOffset - 30
-    
-    -- Crafting Orders subsection
-    local craftHeader = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    craftHeader:SetPoint("TOPLEFT", 10, yOffset)
-    craftHeader:SetText("Crafting Orders")
-    craftHeader:SetTextColor(0.8, 0.8, 0.8)
-    yOffset = yOffset - 20
-    
-    local craftEnable = CreateCheckbox(parent, "Enable", 20, yOffset, settings.craftingOrdersEnabled, function(checked)
-        JT:SetModuleSetting("CurrentExpansionFilter", "craftingOrdersEnabled", checked)
-    end)
-    yOffset = yOffset - 25
-    
-    local craftFocus = CreateCheckbox(parent, "Auto-focus search bar", 20, yOffset, settings.craftingOrdersFocusSearch, function(checked)
-        JT:SetModuleSetting("CurrentExpansionFilter", "craftingOrdersFocusSearch", checked)
-    end)
-    yOffset = yOffset - 30
-    
-    -- Auction House subsection
-    local ahHeader = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    ahHeader:SetPoint("TOPLEFT", 10, yOffset)
-    ahHeader:SetText("Auction House")
-    ahHeader:SetTextColor(0.8, 0.8, 0.8)
-    yOffset = yOffset - 20
-    
-    local ahEnable = CreateCheckbox(parent, "Enable", 20, yOffset, settings.auctionHouseEnabled, function(checked)
-        JT:SetModuleSetting("CurrentExpansionFilter", "auctionHouseEnabled", checked)
-    end)
-    yOffset = yOffset - 25
-    
-    local ahFocus = CreateCheckbox(parent, "Auto-focus search bar", 20, yOffset, settings.auctionHouseFocusSearch, function(checked)
-        JT:SetModuleSetting("CurrentExpansionFilter", "auctionHouseFocusSearch", checked)
-    end)
-    yOffset = yOffset - 30
-    
-    return yOffset
-end
+-- Build a single option control based on schema
+local function BuildOptionControl(parent, moduleName, schema, yOffset)
+    local settings = JT:GetModuleSettings(moduleName)
+    if not settings then 
+        -- Fallback for safety, though settings should exist if module is registered
+        settings = {}
+    end
 
--- Build UI for Auto Role Queue module
-local function BuildAutoRoleQueueOptions(parent, yOffset)
-    local settings = JT:GetModuleSettings("AutoRoleQueue")
-    if not settings then return yOffset end
+    local type = schema.type
+    local key = schema.key
+    local default = schema.default
     
-    -- Section header
-    local header = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    header:SetPoint("TOPLEFT", 0, yOffset)
-    header:SetText("Auto Role Queue")
-    header:SetTextColor(0.67, 0.4, 1)
-    yOffset = yOffset - 20
-    
-    -- Description
-    local desc = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    desc:SetPoint("TOPLEFT", 0, yOffset)
-    desc:SetText("Automatically accepts role checks when queuing")
-    desc:SetTextColor(0.7, 0.7, 0.7)
-    yOffset = yOffset - 20
-    
-    -- Enable checkbox
-    local enableCb = CreateCheckbox(parent, "Enabled", 0, yOffset, settings.enabled, function(checked)
-        JT:SetModuleEnabled("AutoRoleQueue", checked)
-    end)
-    yOffset = yOffset - 30
+    -- Get current value safely
+    local currentValue = default
+    if key and settings[key] ~= nil then
+        currentValue = settings[key]
+    end
+
+    if type == "header" then
+        local header = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+        header:SetPoint("TOPLEFT", 0, yOffset)
+        header:SetText(schema.label)
+        header:SetTextColor(0.67, 0.4, 1) -- Purple-ish theme
+        return yOffset - 25
+        
+    elseif type == "subheader" then
+        local header = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        header:SetPoint("TOPLEFT", 10, yOffset)
+        header:SetText(schema.label)
+        header:SetTextColor(0.8, 0.8, 0.8)
+        return yOffset - 20
+        
+    elseif type == "description" then
+        local desc = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        desc:SetPoint("TOPLEFT", 0, yOffset)
+        desc:SetText(schema.text)
+        desc:SetTextColor(0.7, 0.7, 0.7)
+        return yOffset - 20
+        
+    elseif type == "checkbox" then
+        -- Handle special "enabled" key separately to use JT:SetModuleEnabled
+        local onChange
+        if key == "enabled" then
+            onChange = function(checked)
+                JT:SetModuleEnabled(moduleName, checked)
+            end
+        else
+            onChange = function(checked)
+                JT:SetModuleSetting(moduleName, key, checked)
+            end
+        end
+        
+        -- Indent if it's not a main toggle or if it follows a subheader
+        local xPos = (key == "enabled") and 0 or 20
+        
+        CreateCheckbox(parent, schema.label, xPos, yOffset, currentValue, onChange)
+        return yOffset - 30
+        
+    elseif type == "slider" then
+        CreateSlider(parent, schema.label, 0, yOffset, schema.min, schema.max, schema.step, currentValue, function(val)
+            JT:SetModuleSetting(moduleName, key, val)
+        end)
+        return yOffset - 50 -- Sliders are taller
+        
+    elseif type == "input" then
+        CreateTextInput(parent, schema.label, 0, yOffset, schema.width or 150, currentValue, function(val)
+            JT:SetModuleSetting(moduleName, key, val)
+        end)
+        return yOffset - 40
+        
+    elseif type == "dropdown" then
+        CreateDropdown(parent, schema.label, 0, yOffset, schema.width or 200, schema.options, currentValue, function(val)
+            JT:SetModuleSetting(moduleName, key, val)
+        end)
+        return yOffset - 55
+        
+    elseif type == "button" then
+        CreateButton(parent, schema.label, 0, yOffset, schema.width or 120, schema.func)
+        return yOffset - 40
+    end
     
     return yOffset
 end
@@ -380,16 +417,27 @@ local function PopulateOptions()
     if not optionsFrame then return end
     
     local content = optionsFrame.content
+    
+    -- Clear existing children if repopulating (simple way: hide all, though proper would be object pool)
+    -- For this addon, we just create once. If we needed dynamic updates, we'd add cleanup logic here.
+    
     local yOffset = 0
     
-    -- Build options for each module
-    yOffset = BuildRangeIndicatorOptions(content, yOffset)
-    yOffset = CreateSeparator(content, yOffset)
-    yOffset = BuildCurrentExpansionFilterOptions(content, yOffset)
-    yOffset = CreateSeparator(content, yOffset)
-    yOffset = BuildAutoRoleQueueOptions(content, yOffset)
-    
-    -- Add more modules here in the future
+    -- Iterate through modules in defined order
+    for _, moduleName in ipairs(MODULE_ORDER) do
+        local module = JT.modules[moduleName]
+        if module and module.GetOptions then
+            local optionsSchema = module:GetOptions()
+            
+            -- Build UI for this module
+            for _, item in ipairs(optionsSchema) do
+                yOffset = BuildOptionControl(content, moduleName, item, yOffset)
+            end
+            
+            -- Add separator after each module
+            yOffset = CreateSeparator(content, yOffset)
+        end
+    end
 end
 
 -- Toggle options visibility
