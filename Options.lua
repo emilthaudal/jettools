@@ -12,17 +12,17 @@ local MODULE_ORDER = {
     "CurrentExpansionFilter",
     "AutoRoleQueue",
     "CharacterSheet",
-    "FocusCastbar",
     "FocusMarkerAnnouncement",
     "GearUpgradeRanks",
     "CharacterStatFormatting",
+    "CursorGCD",
     "SlashCommands",
 }
 
 -- Create the options frame
 local function CreateOptionsFrame()
     local frame = CreateFrame("Frame", "JetToolsOptionsFrame", UIParent, "BackdropTemplate")
-    frame:SetSize(300, 1250)
+    frame:SetSize(640, 600) -- Wider for 2 columns, shorter height
     frame:SetPoint("CENTER")
     frame:SetBackdrop({
         bgFile = "Interface/Tooltips/UI-Tooltip-Background",
@@ -114,10 +114,10 @@ local function CreateSlider(parent, label, x, y, min, max, step, value, onChange
 end
 
 -- Create a horizontal separator line
-local function CreateSeparator(parent, yOffset)
+local function CreateSeparator(parent, xOffset, yOffset, width)
     local separator = parent:CreateTexture(nil, "ARTWORK")
-    separator:SetPoint("TOPLEFT", 0, yOffset - 5)
-    separator:SetSize(270, 1)
+    separator:SetPoint("TOPLEFT", xOffset, yOffset - 5)
+    separator:SetSize(width or 270, 1)
     separator:SetColorTexture(0.3, 0.4, 0.6, 0.8)
     return yOffset - 15
 end
@@ -329,7 +329,7 @@ end
 
 
 -- Build a single option control based on schema
-local function BuildOptionControl(parent, moduleName, schema, yOffset)
+local function BuildOptionControl(parent, moduleName, schema, xOffset, yOffset)
     local settings = JT:GetModuleSettings(moduleName)
     if not settings then 
         -- Fallback for safety, though settings should exist if module is registered
@@ -348,23 +348,25 @@ local function BuildOptionControl(parent, moduleName, schema, yOffset)
 
     if type == "header" then
         local header = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-        header:SetPoint("TOPLEFT", 0, yOffset)
+        header:SetPoint("TOPLEFT", xOffset, yOffset)
         header:SetText(schema.label)
         header:SetTextColor(0.67, 0.4, 1) -- Purple-ish theme
         return yOffset - 25
         
     elseif type == "subheader" then
         local header = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-        header:SetPoint("TOPLEFT", 10, yOffset)
+        header:SetPoint("TOPLEFT", xOffset + 10, yOffset)
         header:SetText(schema.label)
         header:SetTextColor(0.8, 0.8, 0.8)
         return yOffset - 20
         
     elseif type == "description" then
         local desc = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-        desc:SetPoint("TOPLEFT", 0, yOffset)
+        desc:SetPoint("TOPLEFT", xOffset, yOffset)
         desc:SetText(schema.text)
         desc:SetTextColor(0.7, 0.7, 0.7)
+        desc:SetWidth(280) -- Constrain width for columns
+        desc:SetJustifyH("LEFT")
         return yOffset - 20
         
     elseif type == "checkbox" then
@@ -381,31 +383,69 @@ local function BuildOptionControl(parent, moduleName, schema, yOffset)
         end
         
         -- Indent if it's not a main toggle or if it follows a subheader
-        local xPos = (key == "enabled") and 0 or 20
+        local indent = (key == "enabled") and 0 or 20
         
-        CreateCheckbox(parent, schema.label, xPos, yOffset, currentValue, onChange)
+        CreateCheckbox(parent, schema.label, xOffset + indent, yOffset, currentValue, onChange)
         return yOffset - 30
         
     elseif type == "slider" then
-        CreateSlider(parent, schema.label, 0, yOffset, schema.min, schema.max, schema.step, currentValue, function(val)
+        CreateSlider(parent, schema.label, xOffset, yOffset, schema.min, schema.max, schema.step, currentValue, function(val)
             JT:SetModuleSetting(moduleName, key, val)
         end)
         return yOffset - 50 -- Sliders are taller
         
     elseif type == "input" then
-        CreateTextInput(parent, schema.label, 0, yOffset, schema.width or 150, currentValue, function(val)
+        CreateTextInput(parent, schema.label, xOffset, yOffset, schema.width or 150, currentValue, function(val)
             JT:SetModuleSetting(moduleName, key, val)
         end)
         return yOffset - 40
         
     elseif type == "dropdown" then
-        CreateDropdown(parent, schema.label, 0, yOffset, schema.width or 200, schema.options, currentValue, function(val)
+        CreateDropdown(parent, schema.label, xOffset, yOffset, schema.width or 200, schema.options, currentValue, function(val)
             JT:SetModuleSetting(moduleName, key, val)
         end)
         return yOffset - 55
         
     elseif type == "button" then
-        CreateButton(parent, schema.label, 0, yOffset, schema.width or 120, schema.func)
+        CreateButton(parent, schema.label, xOffset, yOffset, schema.width or 120, schema.func)
+        return yOffset - 40
+        
+    elseif type == "color" then
+        local btn = CreateButton(parent, schema.label, xOffset, yOffset, 150, function()
+            local info = UIDropDownMenu_CreateInfo()
+            info.r = currentValue.r
+            info.g = currentValue.g
+            info.b = currentValue.b
+            info.opacity = currentValue.a
+            info.hasOpacity = true
+            
+            info.swatchFunc = function()
+                local r, g, b = ColorPickerFrame:GetColorRGB()
+                local a = OpacitySliderFrame:GetValue()
+                JT:SetModuleSetting(moduleName, key, {r=r, g=g, b=b, a=a})
+            end
+            
+            info.opacityFunc = function()
+                local r, g, b = ColorPickerFrame:GetColorRGB()
+                local a = OpacitySliderFrame:GetValue()
+                JT:SetModuleSetting(moduleName, key, {r=r, g=g, b=b, a=a})
+            end
+            
+            info.cancelFunc = function(restore)
+                if restore then
+                    JT:SetModuleSetting(moduleName, key, {r=restore.r, g=restore.g, b=restore.b, a=restore.opacity})
+                end
+            end
+            
+            ColorPickerFrame:SetupColorPickerAndShow(info)
+        end)
+        
+        -- Preview swatch
+        local swatch = btn:CreateTexture(nil, "OVERLAY")
+        swatch:SetSize(20, 20)
+        swatch:SetPoint("RIGHT", -5, 0)
+        swatch:SetColorTexture(currentValue.r, currentValue.g, currentValue.b, currentValue.a or 1)
+        
         return yOffset - 40
     end
     
@@ -418,24 +458,49 @@ local function PopulateOptions()
     
     local content = optionsFrame.content
     
-    -- Clear existing children if repopulating (simple way: hide all, though proper would be object pool)
-    -- For this addon, we just create once. If we needed dynamic updates, we'd add cleanup logic here.
+    -- Clear existing children if repopulating
+    -- Note: This simplistic "create new" approach works for static options. 
+    -- If we refreshed often we'd leak memory without proper cleanup/pool.
+    -- Assuming one-time populate for now.
     
-    local yOffset = 0
+    -- Two-column layout
+    local leftY = 0
+    local rightY = 0
+    local COL_WIDTH = 280
+    local COL_GAP = 40
+    local RIGHT_X_OFFSET = COL_WIDTH + COL_GAP
     
     -- Iterate through modules in defined order
+    -- Using a "masonry" fill: add to whichever column is shorter
     for _, moduleName in ipairs(MODULE_ORDER) do
         local module = JT.modules[moduleName]
         if module and module.GetOptions then
             local optionsSchema = module:GetOptions()
             
+            -- Decide column
+            local isLeft = (leftY >= rightY) -- Actually, typically 0 is top, negative is down. 
+            -- If leftY is 0 and rightY is 0, start left.
+            -- If leftY is -100 and rightY is -20, left is "taller" (more negative), so put next in right.
+            -- We want to put into the SHORTER column (closest to 0).
+            
+            local useLeft = (leftY >= rightY) 
+            local currentY = useLeft and leftY or rightY
+            local currentX = useLeft and 0 or RIGHT_X_OFFSET
+            
             -- Build UI for this module
             for _, item in ipairs(optionsSchema) do
-                yOffset = BuildOptionControl(content, moduleName, item, yOffset)
+                currentY = BuildOptionControl(content, moduleName, item, currentX, currentY)
             end
             
             -- Add separator after each module
-            yOffset = CreateSeparator(content, yOffset)
+            currentY = CreateSeparator(content, currentX, currentY, COL_WIDTH)
+            
+            -- Update column cursor
+            if useLeft then
+                leftY = currentY - 15 -- Extra padding between modules
+            else
+                rightY = currentY - 15
+            end
         end
     end
 end

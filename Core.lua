@@ -30,11 +30,6 @@ local defaults = {
         CharacterSheet = {
             enabled = true,
         },
-        FocusCastbar = {
-            enabled = true,
-            positionX = 0,
-            positionY = -50,
-        },
         FocusMarkerAnnouncement = {
             enabled = false,
             macroName = "focus",
@@ -44,6 +39,12 @@ local defaults = {
         },
         CharacterStatFormatting = {
             enabled = true,
+        },
+        CursorGCD = {
+            enabled = true,
+            size = 64,
+            color = { r = 1, g = 1, b = 1, a = 1 },
+            animate = true,
         },
         SlashCommands = {
             enabled = true,
