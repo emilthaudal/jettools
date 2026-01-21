@@ -12,7 +12,6 @@ local MODULE_ORDER = {
     "CurrentExpansionFilter",
     "AutoRoleQueue",
     "CharacterSheet",
-    "FocusMarkerAnnouncement",
     "GearUpgradeRanks",
     "CharacterStatFormatting",
     "SlashCommands",

@@ -18,7 +18,6 @@ Modules/RangeIndicator.lua
 Modules/CurrentExpansionFilter.lua
 Modules/AutoRoleQueue.lua
 Modules/CharacterSheet.lua
-Modules/FocusMarkerAnnouncement.lua
 Modules/GearUpgradeRanks.lua
 Modules/CharacterStatFormatting.lua
 Modules/SlashCommands.lua

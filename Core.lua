@@ -30,10 +30,6 @@ local defaults = {
         CharacterSheet = {
             enabled = true,
         },
-        FocusMarkerAnnouncement = {
-            enabled = false,
-            macroName = "focus",
-        },
         GearUpgradeRanks = {
             enabled = true,
         },
