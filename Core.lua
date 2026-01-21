@@ -40,12 +40,6 @@ local defaults = {
         CharacterStatFormatting = {
             enabled = true,
         },
-        CursorGCD = {
-            enabled = true,
-            size = 64,
-            color = { r = 1, g = 1, b = 1, a = 1 },
-            animate = true,
-        },
         SlashCommands = {
             enabled = true,
         },

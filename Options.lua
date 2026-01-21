@@ -15,7 +15,6 @@ local MODULE_ORDER = {
     "FocusMarkerAnnouncement",
     "GearUpgradeRanks",
     "CharacterStatFormatting",
-    "CursorGCD",
     "SlashCommands",
 }
 

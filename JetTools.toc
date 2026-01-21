@@ -21,5 +21,4 @@ Modules/CharacterSheet.lua
 Modules/FocusMarkerAnnouncement.lua
 Modules/GearUpgradeRanks.lua
 Modules/CharacterStatFormatting.lua
-Modules/CursorGCD.lua
 Modules/SlashCommands.lua
