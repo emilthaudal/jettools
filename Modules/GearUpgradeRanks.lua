@@ -87,48 +87,48 @@ local UPGRADE_TIERS = IS_MIDNIGHT
     or {
         {
             name = "Explorer",
-            minIlvl = 642,
-            maxIlvl = 665,
+            minIlvl = 82,
+            maxIlvl = 105,
             maxUpgrade = 8,
             color = ITEM_QUALITY_COLORS[0], -- Poor/Gray (Matches reference)
             crestLevels = { [1] = CRESTS[0], [4] = CRESTS[0], [8] = nil },
         },
         {
             name = "Adventurer",
-            minIlvl = 655,
-            maxIlvl = 678,
+            minIlvl = 95,
+            maxIlvl = 118,
             maxUpgrade = 8,
             color = ITEM_QUALITY_COLORS[1], -- White
             crestLevels = { [1] = CRESTS[0], [4] = CRESTS[1], [8] = nil },
         },
         {
             name = "Veteran",
-            minIlvl = 668,
-            maxIlvl = 691,
+            minIlvl = 108,
+            maxIlvl = 131,
             maxUpgrade = 8,
             color = ITEM_QUALITY_COLORS[2], -- Green
             crestLevels = { [1] = CRESTS[1], [4] = CRESTS[2], [8] = nil },
         },
         {
             name = "Champion",
-            minIlvl = 681,
-            maxIlvl = 704,
+            minIlvl = 121,
+            maxIlvl = 144,
             maxUpgrade = 8,
             color = ITEM_QUALITY_COLORS[3], -- Blue
             crestLevels = { [1] = CRESTS[2], [4] = CRESTS[3], [8] = nil },
         },
         {
             name = "Hero",
-            minIlvl = 693,
-            maxIlvl = 718,
+            minIlvl = 134,
+            maxIlvl = 157,
             maxUpgrade = 8,
             color = ITEM_QUALITY_COLORS[4], -- Epic
             crestLevels = { [1] = CRESTS[3], [4] = CRESTS[4], [8] = nil },
         },
         {
             name = "Myth",
-            minIlvl = 707,
-            maxIlvl = 730,
+            minIlvl = 147,
+            maxIlvl = 170,
             maxUpgrade = 8,
             color = ITEM_QUALITY_COLORS[5], -- Legendary
             crestLevels = { [1] = CRESTS[4], [8] = nil },
