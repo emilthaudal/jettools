@@ -30,15 +30,6 @@ local defaults = {
         CharacterSheet = {
             enabled = true,
         },
-        FocusCastbar = {
-            enabled = true,
-            positionX = 0,
-            positionY = -50,
-        },
-        FocusMarkerAnnouncement = {
-            enabled = false,
-            macroName = "focus",
-        },
         GearUpgradeRanks = {
             enabled = true,
         },
