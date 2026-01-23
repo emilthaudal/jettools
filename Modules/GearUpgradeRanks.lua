@@ -20,7 +20,7 @@ local isEnabled = false
 local initialized = false
 
 -- Expansion detection
-local IS_MIDNIGHT = select(4, GetBuildInfo()) >= 120000
+local IS_MIDNIGHT = select(4, GetBuildInfo()) > 120000
 
 -- Crest Data
 -- Used to identify crests by internal ID and provide display info
