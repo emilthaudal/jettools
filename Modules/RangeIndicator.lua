@@ -57,12 +57,12 @@ end
 
 -- Class-specific range check abilities (melee abilities for accurate range)
 local CLASS_RANGE_ABILITIES = {
-    WARRIOR = "Slam",
-    PALADIN = "Crusader Strike",
+    WARRIOR = "Pummel",
+    PALADIN = "Rebuke",
     DEATHKNIGHT = "Death Strike",
     MONK = "Tiger Palm",
     DEMONHUNTER = "Demon's Bite",
-    ROGUE = "Sinister Strike",
+    ROGUE = "Kick",
     DRUID = "Shred",
     SHAMAN = "Stormstrike",
     EVOKER = "Quell",  -- Mid-range class, 25yd ability
