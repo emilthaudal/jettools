@@ -15,6 +15,7 @@ local MODULE_ORDER = {
     "GearUpgradeRanks",
     "CharacterStatFormatting",
     "SlashCommands",
+    "CombatStatus",
 }
 
 -- Create the options frame

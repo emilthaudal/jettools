@@ -39,6 +39,11 @@ local defaults = {
         SlashCommands = {
             enabled = true,
         },
+        CombatStatus = {
+            enabled = true,
+            fontSize = 24,
+            fontFace = "Friz Quadrata TT",
+        },
     },
 }
 
