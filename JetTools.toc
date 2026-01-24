@@ -21,3 +21,5 @@ Modules/CharacterSheet.lua
 Modules/GearUpgradeRanks.lua
 Modules/CharacterStatFormatting.lua
 Modules/SlashCommands.lua
+Modules/CombatStatus.lua
+
