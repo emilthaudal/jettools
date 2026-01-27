@@ -13,6 +13,7 @@ local MODULE_ORDER = {
     "AutoRoleQueue",
     "CharacterSheet",
     "GearUpgradeRanks",
+    "CDMAuraRemover",
     "CharacterStatFormatting",
     "SlashCommands",
     "CombatStatus",

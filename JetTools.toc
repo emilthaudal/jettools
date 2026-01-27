@@ -19,6 +19,7 @@ Modules/CurrentExpansionFilter.lua
 Modules/AutoRoleQueue.lua
 Modules/CharacterSheet.lua
 Modules/GearUpgradeRanks.lua
+Modules/CDMAuraRemover.lua
 Modules/CharacterStatFormatting.lua
 Modules/SlashCommands.lua
 Modules/CombatStatus.lua
