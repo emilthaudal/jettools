@@ -28,10 +28,14 @@ local defaults = {
             enabled = false,
         },
         CharacterSheet = {
-            enabled = true,
+            enabled = false,
         },
         GearUpgradeRanks = {
             enabled = true,
+        },
+        CDMAuraRemover = {
+            enabled = true,
+            enableAuraOverride = true,
         },
         CharacterStatFormatting = {
             enabled = true,
