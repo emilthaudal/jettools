@@ -62,6 +62,10 @@ local function CreateOptionsFrame()
     content:SetPoint("BOTTOMRIGHT", -15, 15)
     frame.content = content
     
+    frame.Refresh = function(self)
+        JT:RefreshOptions()
+    end
+    
     return frame
 end
 
@@ -347,6 +351,10 @@ local function BuildOptionControl(parent, moduleName, schema, xOffset, yOffset)
         currentValue = settings[key]
     end
 
+    -- Store group expansion state
+    -- Key format: "ModuleName.GroupLabel"
+    JT.groupState = JT.groupState or {}
+
     if type == "header" then
         local header = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
         header:SetPoint("TOPLEFT", xOffset, yOffset)
@@ -354,6 +362,37 @@ local function BuildOptionControl(parent, moduleName, schema, xOffset, yOffset)
         header:SetTextColor(0.67, 0.4, 1) -- Purple-ish theme
         return yOffset - 25
         
+    elseif type == "group" then
+        -- Collapsible group
+        local groupKey = moduleName .. "." .. schema.label
+        local isExpanded = JT.groupState[groupKey]
+        
+        local btn = CreateButton(parent, (isExpanded and "[-] " or "[+] ") .. schema.label, xOffset, yOffset, 200, function(self)
+            JT.groupState[groupKey] = not JT.groupState[groupKey]
+            -- Trigger full refresh of options to re-layout
+            if optionsFrame and optionsFrame.Refresh then
+                 optionsFrame:Refresh()
+            end
+        end)
+        
+        -- Style button to look more like a header
+        -- Remove standard button textures if we want just text, but standard button is fine for now.
+        -- Let's make it look slightly distinct.
+        
+        yOffset = yOffset - 30
+        
+        if isExpanded and schema.children then
+            -- Render children
+            -- Indent children slightly
+            local childX = xOffset + 10
+            for _, child in ipairs(schema.children) do
+                yOffset = BuildOptionControl(parent, moduleName, child, childX, yOffset)
+            end
+            yOffset = yOffset - 5 -- Extra padding after group
+        end
+        
+        return yOffset
+
     elseif type == "subheader" then
         local header = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
         header:SetPoint("TOPLEFT", xOffset + 10, yOffset)
@@ -503,6 +542,12 @@ local function PopulateOptions()
             columnY[targetCol] = currentY - 15 -- Extra padding between modules
         end
     end
+end
+
+-- Refresh options layout (used for collapsing/expanding groups)
+function JT:RefreshOptions()
+    if not optionsFrame then return end
+    PopulateOptions()
 end
 
 -- Toggle options visibility

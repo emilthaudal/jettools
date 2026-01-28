@@ -55,6 +55,9 @@ local defaults = {
             xOffset = 0,
             yOffset = 0,
             anchorParent = "UIParent",
+            anchorPoint = "TOPLEFT",
+            relativePoint = "BOTTOMLEFT",
+            showIcon = true,
         },
     },
 }
