@@ -17,12 +17,13 @@ local MODULE_ORDER = {
     "CharacterStatFormatting",
     "SlashCommands",
     "CombatStatus",
+    "BuffBarStyling",
 }
 
 -- Create the options frame
 local function CreateOptionsFrame()
     local frame = CreateFrame("Frame", "JetToolsOptionsFrame", UIParent, "BackdropTemplate")
-    frame:SetSize(640, 600) -- Wider for 2 columns, shorter height
+    frame:SetSize(960, 600) -- Wider for 3 columns, shorter height
     frame:SetPoint("CENTER")
     frame:SetBackdrop({
         bgFile = "Interface/Tooltips/UI-Tooltip-Background",
@@ -463,29 +464,32 @@ local function PopulateOptions()
     -- If we refreshed often we'd leak memory without proper cleanup/pool.
     -- Assuming one-time populate for now.
     
-    -- Two-column layout
-    local leftY = 0
-    local rightY = 0
+    -- Three-column layout
+    local numColumns = 3
+    local columnY = {0, 0, 0}
     local COL_WIDTH = 280
     local COL_GAP = 40
-    local RIGHT_X_OFFSET = COL_WIDTH + COL_GAP
     
     -- Iterate through modules in defined order
-    -- Using a "masonry" fill: add to whichever column is shorter
+    -- Using a "masonry" fill: add to whichever column is shorter (highest Y value)
     for _, moduleName in ipairs(MODULE_ORDER) do
         local module = JT.modules[moduleName]
         if module and module.GetOptions then
             local optionsSchema = module:GetOptions()
             
-            -- Decide column
-            local isLeft = (leftY >= rightY) -- Actually, typically 0 is top, negative is down. 
-            -- If leftY is 0 and rightY is 0, start left.
-            -- If leftY is -100 and rightY is -20, left is "taller" (more negative), so put next in right.
-            -- We want to put into the SHORTER column (closest to 0).
+            -- Decide column: find the one with max Y (closest to 0)
+            local targetCol = 1
+            local maxY = columnY[1]
             
-            local useLeft = (leftY >= rightY) 
-            local currentY = useLeft and leftY or rightY
-            local currentX = useLeft and 0 or RIGHT_X_OFFSET
+            for i = 2, numColumns do
+                if columnY[i] > maxY then
+                    maxY = columnY[i]
+                    targetCol = i
+                end
+            end
+            
+            local currentY = maxY
+            local currentX = (targetCol - 1) * (COL_WIDTH + COL_GAP)
             
             -- Build UI for this module
             for _, item in ipairs(optionsSchema) do
@@ -496,11 +500,7 @@ local function PopulateOptions()
             currentY = CreateSeparator(content, currentX, currentY, COL_WIDTH)
             
             -- Update column cursor
-            if useLeft then
-                leftY = currentY - 15 -- Extra padding between modules
-            else
-                rightY = currentY - 15
-            end
+            columnY[targetCol] = currentY - 15 -- Extra padding between modules
         end
     end
 end

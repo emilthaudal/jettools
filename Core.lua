@@ -48,6 +48,14 @@ local defaults = {
             fontSize = 24,
             fontFace = "Friz Quadrata TT",
         },
+        BuffBarStyling = {
+            enabled = false,
+            barHeight = 18,
+            barWidth = 200,
+            xOffset = 0,
+            yOffset = 0,
+            anchorParent = "UIParent",
+        },
     },
 }
 
