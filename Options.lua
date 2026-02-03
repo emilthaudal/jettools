@@ -368,7 +368,10 @@ local function BuildOptionControl(parent, moduleName, schema, xOffset, yOffset)
         desc:SetTextColor(0.7, 0.7, 0.7)
         desc:SetWidth(280) -- Constrain width for columns
         desc:SetJustifyH("LEFT")
-        return yOffset - 20
+        
+        -- Calculate actual height of wrapped text and add padding
+        local textHeight = desc:GetStringHeight()
+        return yOffset - textHeight - 10  -- Dynamic height + 10px padding
         
     elseif type == "checkbox" then
         -- Handle special "enabled" key separately to use JT:SetModuleEnabled

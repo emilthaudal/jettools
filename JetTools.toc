@@ -23,4 +23,5 @@ Modules/CDMAuraRemover.lua
 Modules/CharacterStatFormatting.lua
 Modules/SlashCommands.lua
 Modules/CombatStatus.lua
+Modules/PetReminders.lua
 
