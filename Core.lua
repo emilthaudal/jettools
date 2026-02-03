@@ -48,6 +48,17 @@ local defaults = {
             fontSize = 24,
             fontFace = "Friz Quadrata TT",
         },
+        PetReminders = {
+            enabled = true,
+            hideInCombat = true,
+            fontSize = 36,
+            framePosition = {
+                point = "CENTER",
+                relativePoint = "CENTER",
+                x = 0,
+                y = 280,
+            },
+        },
     },
 }
 

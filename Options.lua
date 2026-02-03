@@ -17,12 +17,13 @@ local MODULE_ORDER = {
     "CharacterStatFormatting",
     "SlashCommands",
     "CombatStatus",
+    "PetReminders",
 }
 
 -- Create the options frame
 local function CreateOptionsFrame()
     local frame = CreateFrame("Frame", "JetToolsOptionsFrame", UIParent, "BackdropTemplate")
-    frame:SetSize(640, 600) -- Wider for 2 columns, shorter height
+    frame:SetSize(950, 600) -- Wider for 3 columns
     frame:SetPoint("CENTER")
     frame:SetBackdrop({
         bgFile = "Interface/Tooltips/UI-Tooltip-Background",
@@ -463,29 +464,33 @@ local function PopulateOptions()
     -- If we refreshed often we'd leak memory without proper cleanup/pool.
     -- Assuming one-time populate for now.
     
-    -- Two-column layout
-    local leftY = 0
-    local rightY = 0
+    -- Three-column layout
+    local columnY = {0, 0, 0}  -- Track Y position for each column
     local COL_WIDTH = 280
     local COL_GAP = 40
-    local RIGHT_X_OFFSET = COL_WIDTH + COL_GAP
+    local columnOffsets = {
+        0,                          -- Column 1 (left)
+        COL_WIDTH + COL_GAP,        -- Column 2 (center) = 320
+        (COL_WIDTH + COL_GAP) * 2   -- Column 3 (right) = 640
+    }
     
     -- Iterate through modules in defined order
-    -- Using a "masonry" fill: add to whichever column is shorter
+    -- Using a "masonry" fill: add to whichever column is shortest
     for _, moduleName in ipairs(MODULE_ORDER) do
         local module = JT.modules[moduleName]
         if module and module.GetOptions then
             local optionsSchema = module:GetOptions()
             
-            -- Decide column
-            local isLeft = (leftY >= rightY) -- Actually, typically 0 is top, negative is down. 
-            -- If leftY is 0 and rightY is 0, start left.
-            -- If leftY is -100 and rightY is -20, left is "taller" (more negative), so put next in right.
-            -- We want to put into the SHORTER column (closest to 0).
+            -- Find the shortest column (closest to 0, since Y goes negative)
+            local shortestCol = 1
+            for i = 2, 3 do
+                if columnY[i] > columnY[shortestCol] then
+                    shortestCol = i
+                end
+            end
             
-            local useLeft = (leftY >= rightY) 
-            local currentY = useLeft and leftY or rightY
-            local currentX = useLeft and 0 or RIGHT_X_OFFSET
+            local currentY = columnY[shortestCol]
+            local currentX = columnOffsets[shortestCol]
             
             -- Build UI for this module
             for _, item in ipairs(optionsSchema) do
@@ -496,11 +501,7 @@ local function PopulateOptions()
             currentY = CreateSeparator(content, currentX, currentY, COL_WIDTH)
             
             -- Update column cursor
-            if useLeft then
-                leftY = currentY - 15 -- Extra padding between modules
-            else
-                rightY = currentY - 15
-            end
+            columnY[shortestCol] = currentY - 15  -- Extra padding between modules
         end
     end
 end
