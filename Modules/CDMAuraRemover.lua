@@ -1,6 +1,5 @@
 -- JetTools CDMAuraRemover Module
 -- Replaces Aura Duration (yellow) with Spell Cooldown (black) on action bars when a buff is active
--- Originally "CooldownSwipeControl"
 
 local addonName, JT = ...
 
@@ -25,17 +24,17 @@ end
 -- Apply desaturation when aura is active but we're showing spell cooldown
 local function ApplyDesaturationForAuraActive(icon, desaturate)
     if not icon then return end
-    
+
     local iconTexture = icon.icon or icon.Icon
     if not iconTexture then return end
-    
+
     -- Set the force value flag - hooks will enforce this
     if desaturate then
         icon._CSC_ForceDesatValue = 1
     else
         icon._CSC_ForceDesatValue = nil
     end
-    
+
     -- Apply immediately
     if desaturate then
         if iconTexture.SetDesaturation then
@@ -56,16 +55,16 @@ end
 local function HookDesaturation(icon)
     local iconTexture = icon.icon or icon.Icon
     if not iconTexture or iconTexture._CSC_DesatHooked then return end
-    
+
     iconTexture._CSC_DesatHooked = true
     iconTexture._CSC_ParentIcon = icon
-    
+
     -- Hook SetDesaturated (boolean version)
     if iconTexture.SetDesaturated then
         hooksecurefunc(iconTexture, "SetDesaturated", function(self, desaturated)
             local pf = self._CSC_ParentIcon
             if not pf or pf._CSC_BypassDesatHook then return end
-            
+
             -- If we have a forced desaturation value, enforce it
             local forceValue = pf._CSC_ForceDesatValue
             if forceValue ~= nil and self.SetDesaturation then
@@ -75,13 +74,13 @@ local function HookDesaturation(icon)
             end
         end)
     end
-    
+
     -- Hook SetDesaturation (numeric version)
     if iconTexture.SetDesaturation then
         hooksecurefunc(iconTexture, "SetDesaturation", function(self, value)
             local pf = self._CSC_ParentIcon
             if not pf or pf._CSC_BypassDesatHook then return end
-            
+
             -- If we have a forced desaturation value, enforce it
             local forceValue = pf._CSC_ForceDesatValue
             if forceValue ~= nil then
@@ -96,10 +95,10 @@ end
 -- Unified hook for SetCooldown that handles Aura Override
 local function HookSetCooldown(icon)
     if not icon or not icon.Cooldown then return end
-    
+
     -- Ensure desaturation hooks are in place
     HookDesaturation(icon)
-    
+
     if icon._CSC_SetCooldownHooked then return end
     icon._CSC_SetCooldownHooked = true
 
@@ -139,7 +138,7 @@ local function HookSetCooldown(icon)
                             end
                         end)
                         parentIcon._CSC_BypassCDHook = false
-                        
+
                         -- Set swipe color to black (like regular cooldown)
                         if self.SetSwipeColor then
                             self:SetSwipeColor(0, 0, 0, 0.8)
@@ -153,12 +152,12 @@ local function HookSetCooldown(icon)
                         parentIcon._CSC_BypassCDHook = true
                         self:SetCooldown(cooldownInfo.startTime, cooldownInfo.duration)
                         parentIcon._CSC_BypassCDHook = false
-                        
+
                         -- Set swipe color to black
                         if self.SetSwipeColor then
                             self:SetSwipeColor(0, 0, 0, 0.8)
                         end
-                        
+
                         -- Enforce desaturation
                         ApplyDesaturationForAuraActive(parentIcon, true)
                         overrideActive = true
@@ -166,19 +165,19 @@ local function HookSetCooldown(icon)
                 end
             end
         end
-        
+
         if not overrideActive and settings and settings.enableAuraOverride then
-             -- Reset desaturation if we are not overriding
-             ApplyDesaturationForAuraActive(parentIcon, false)
+            -- Reset desaturation if we are not overriding
+            ApplyDesaturationForAuraActive(parentIcon, false)
         end
     end
 
     hooksecurefunc(icon.Cooldown, "SetCooldown", OnSetCooldown)
-    
+
     -- Also hook SetCooldownFromDurationObject if available, redirecting to the same logic
     if icon.Cooldown.SetCooldownFromDurationObject then
         hooksecurefunc(icon.Cooldown, "SetCooldownFromDurationObject", function(self)
-             OnSetCooldown(self)
+            OnSetCooldown(self)
         end)
     end
 end
@@ -186,7 +185,7 @@ end
 -- Process all icons in a viewer
 local function ProcessViewer(viewer)
     if not viewer then return end
-    local children = {viewer:GetChildren()}
+    local children = { viewer:GetChildren() }
     for _, icon in ipairs(children) do
         if icon.Cooldown then
             HookSetCooldown(icon)
@@ -213,20 +212,20 @@ function CDMAuraRemover:ApplyAllSettings()
                 end)
             end)
         end
-        
+
         -- Force refresh of cooldowns to apply overrides immediately
         if viewer and viewer:IsShown() and settings.enableAuraOverride then
-             local children = {viewer:GetChildren()}
-             for _, icon in ipairs(children) do
-                 if icon.Cooldown and HasActiveAura(icon) then
-                      -- Trigger the hook by re-setting the current cooldown
-                      local start = icon.Cooldown:GetCooldownTimes()
-                      local duration = icon.Cooldown:GetCooldownDuration()
-                      if start and duration then
-                          icon.Cooldown:SetCooldown(start, duration)
-                      end
-                 end
-             end
+            local children = { viewer:GetChildren() }
+            for _, icon in ipairs(children) do
+                if icon.Cooldown and HasActiveAura(icon) then
+                    -- Trigger the hook by re-setting the current cooldown
+                    local start = icon.Cooldown:GetCooldownTimes()
+                    local duration = icon.Cooldown:GetCooldownDuration()
+                    if start and duration then
+                        icon.Cooldown:SetCooldown(start, duration)
+                    end
+                end
+            end
         end
     end
 end
@@ -236,11 +235,11 @@ local eventFrame = CreateFrame("Frame")
 eventFrame:SetScript("OnEvent", function(self, event, arg)
     if event == "UNIT_AURA" and arg == "player" then
         if JT:IsModuleEnabled("CDMAuraRemover") then
-             C_Timer.After(0.1, function() CDMAuraRemover:ApplyAllSettings() end)
+            C_Timer.After(0.1, function() CDMAuraRemover:ApplyAllSettings() end)
         end
     elseif event == "SPELL_UPDATE_COOLDOWN" then
         if JT:IsModuleEnabled("CDMAuraRemover") then
-             C_Timer.After(0.1, function() CDMAuraRemover:ApplyAllSettings() end)
+            C_Timer.After(0.1, function() CDMAuraRemover:ApplyAllSettings() end)
         end
     end
 end)
@@ -281,9 +280,9 @@ end
 
 function CDMAuraRemover:GetOptions()
     return {
-        { type = "header", label = "Cooldown Swipe Control" },
+        { type = "header",      label = "Cooldown Swipe Control" },
         { type = "description", text = "Replaces the yellow Aura Duration swipe with the black Spell Cooldown swipe when a buff is active on the action bar." },
-        { type = "checkbox", label = "Enabled", key = "enabled", default = true },
-        { type = "checkbox", label = "Enable Aura Override", key = "enableAuraOverride", default = true },
+        { type = "checkbox",    label = "Enabled",                                                                                                            key = "enabled",            default = true },
+        { type = "checkbox",    label = "Enable Aura Override",                                                                                               key = "enableAuraOverride", default = true },
     }
 end

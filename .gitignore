@@ -53,3 +53,5 @@ notes.txt
 TODO.txt
 todo.txt
 *.local.lua
+
+.opencode/
