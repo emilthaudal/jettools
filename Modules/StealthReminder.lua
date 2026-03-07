@@ -59,40 +59,51 @@ end
 -- ──────────────────────────────────────────────────────────────
 
 local function UpdateDisplay()
-    if not warningFrame then return end
+    if not warningFrame then
+        print("|cffff8800JetTools SR|r UpdateDisplay: no warningFrame")
+        return
+    end
 
     local settings = JT:GetModuleSettings("StealthReminder")
-    if not settings then return end
+    if not settings then
+        print("|cffff8800JetTools SR|r UpdateDisplay: no settings")
+        return
+    end
 
     -- Normal mode: mouse interaction disabled
     warningFrame:EnableMouse(false)
 
     -- Must be enabled
     if not isEnabled then
+        print("|cffff8800JetTools SR|r UpdateDisplay: not enabled")
         warningFrame:Hide()
         return
     end
 
     -- Only relevant for stealth classes/specs
     if not IsApplicableSpec() then
+        print("|cffff8800JetTools SR|r UpdateDisplay: not applicable spec (class=" .. tostring(playerClass) .. " specID=" .. tostring(playerSpecID) .. ")")
         warningFrame:Hide()
         return
     end
 
     -- Hide during combat
     if inCombat then
+        print("|cffff8800JetTools SR|r UpdateDisplay: in combat")
         warningFrame:Hide()
         return
     end
 
     -- Hide while mounted
     if IsMounted() then
+        print("|cffff8800JetTools SR|r UpdateDisplay: mounted")
         warningFrame:Hide()
         return
     end
 
     -- Optionally hide while resting
     if isResting and settings.hideWhenResting then
+        print("|cffff8800JetTools SR|r UpdateDisplay: resting")
         warningFrame:Hide()
         return
     end
@@ -100,12 +111,15 @@ local function UpdateDisplay()
     -- Decide what to show based on stealth state
     if stealthed then
         if not settings.showWhenStealthed then
+            print("|cffff8800JetTools SR|r UpdateDisplay: stealthed but showWhenStealthed=false")
             warningFrame:Hide()
             return
         end
+        print("|cffff8800JetTools SR|r UpdateDisplay: showing (stealthed=true)")
         warningText:SetText("Stealthed")
         warningText:SetTextColor(0.2, 1, 0.2)  -- green
     else
+        print("|cffff8800JetTools SR|r UpdateDisplay: showing (not stealthed)")
         warningText:SetText("ENTER STEALTH!")
         warningText:SetTextColor(1, 0.15, 0.15)  -- red
     end
@@ -201,6 +215,8 @@ eventFrame:SetScript("OnEvent", function(self, event, ...)
         inCombat     = UnitAffectingCombat("player") and true or false
         isResting    = IsResting() and true or false
 
+        print("|cffff8800JetTools SR|r PLAYER_LOGIN: class=" .. tostring(playerClass) .. " specID=" .. tostring(playerSpecID) .. " stealthed=" .. tostring(stealthed) .. " isEnabled=" .. tostring(isEnabled))
+
         UpdateDisplay()
         return
     end
@@ -236,6 +252,7 @@ end)
 -- ──────────────────────────────────────────────────────────────
 
 function StealthReminder:Init()
+    print("|cffff8800JetTools SR|r Init() called")
     CreateWarningFrame()
     -- PLAYER_LOGIN fires before Enable is called by Core; register it always
     -- so we can snapshot initial state and restore saved position.
@@ -245,6 +262,7 @@ function StealthReminder:Init()
 end
 
 function StealthReminder:Enable()
+    print("|cffff8800JetTools SR|r Enable() called")
     isEnabled = true
     eventFrame:RegisterEvent("UPDATE_STEALTH")
     eventFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
