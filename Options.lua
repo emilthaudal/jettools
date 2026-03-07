@@ -18,12 +18,13 @@ local MODULE_ORDER = {
     "SlashCommands",
     "CombatStatus",
     "PetReminders",
+    "StealthReminder",
 }
 
 -- Create the options frame
 local function CreateOptionsFrame()
     local frame = CreateFrame("Frame", "JetToolsOptionsFrame", UIParent, "BackdropTemplate")
-    frame:SetSize(950, 600) -- Wider for 3 columns
+    frame:SetSize(950, 720) -- Wider for 3 columns
     frame:SetPoint("CENTER")
     frame:SetBackdrop({
         bgFile = "Interface/Tooltips/UI-Tooltip-Background",
