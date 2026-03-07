@@ -192,19 +192,6 @@ end
 
 local eventFrame = CreateFrame("Frame")
 eventFrame:SetScript("OnEvent", function(self, event, ...)
-    if event == "PLAYER_LOGIN" then
-        -- Snapshot initial game state
-        local _, cls = UnitClass("player")
-        playerClass  = cls
-        playerSpecID = GetCurrentSpecID()
-        stealthed    = IsStealthed()
-        inCombat     = UnitAffectingCombat("player") and true or false
-        isResting    = IsResting() and true or false
-
-        UpdateDisplay()
-        return
-    end
-
     -- Guard: ignore all other events when disabled (except spec changes, which
     -- affect applicability even when the module is toggled off)
     if not isEnabled then
@@ -237,15 +224,20 @@ end)
 
 function StealthReminder:Init()
     CreateWarningFrame()
-    -- PLAYER_LOGIN fires before Enable is called by Core; register it always
-    -- so we can snapshot initial state and restore saved position.
-    eventFrame:RegisterEvent("PLAYER_LOGIN")
     -- Spec changes affect applicability even when disabled
     eventFrame:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
 end
 
 function StealthReminder:Enable()
     isEnabled = true
+    -- Snapshot current game state — called from Core's PLAYER_LOGIN handler,
+    -- so player data is available here
+    local _, cls = UnitClass("player")
+    playerClass  = cls
+    playerSpecID = GetCurrentSpecID()
+    stealthed    = IsStealthed()
+    inCombat     = UnitAffectingCombat("player") and true or false
+    isResting    = IsResting() and true or false
     eventFrame:RegisterEvent("UPDATE_STEALTH")
     eventFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
     eventFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
