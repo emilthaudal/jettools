@@ -52,12 +52,16 @@ local defaults = {
             enabled = true,
             hideInCombat = true,
             fontSize = 36,
-            framePosition = {
-                point = "CENTER",
-                relativePoint = "CENTER",
-                x = 0,
-                y = 280,
-            },
+            posX = 0,
+            posY = 280,
+        },
+        StealthReminder = {
+            enabled = false,
+            showWhenStealthed = true,
+            hideWhenResting = true,
+            fontSize = 24,
+            posX = 0,
+            posY = 150,
         },
     },
 }

@@ -74,14 +74,6 @@ local PET_DATA = {
     },
 }
 
--- Backdrop shown when position is unlocked (drag mode)
-local UNLOCK_BACKDROP = {
-    bgFile   = "Interface\\Tooltips\\UI-Tooltip-Background",
-    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-    tile     = true, tileSize = 16, edgeSize = 16,
-    insets   = { left = 4, right = 4, top = 4, bottom = 4 },
-}
-
 -- Module state
 local isEnabled = false
 local warningFrame = nil
@@ -216,45 +208,18 @@ end
 local function CreateWarningFrame()
     if warningFrame then return end
 
-    local frame = CreateFrame("Frame", "JetToolsPetReminder", UIParent, "BackdropTemplate")
+    local frame = CreateFrame("Frame", "JetToolsPetReminder", UIParent)
     frame:SetSize(250, 50)
     frame:SetFrameStrata("MEDIUM")
+    frame:SetClampedToScreen(true)
 
     -- Get saved position or use default
     local settings = JT:GetModuleSettings("PetReminders")
-    local pos = settings and settings.framePosition
-    if pos then
-        frame:SetPoint(pos.point, UIParent, pos.relativePoint, pos.x, pos.y)
-    else
-        frame:SetPoint("CENTER", UIParent, "CENTER", 0, 280)
-    end
+    local x = (settings and settings.posX) or 0
+    local y = (settings and settings.posY) or 280
+    frame:SetPoint("CENTER", UIParent, "CENTER", x, y)
 
     frame:Hide()
-
-    -- Movable; dragging is gated on the unlockPosition setting
-    frame:SetMovable(true)
-    frame:EnableMouse(true)
-    frame:RegisterForDrag("LeftButton")
-    frame:SetClampedToScreen(true)
-
-    frame:SetScript("OnDragStart", function(self)
-        local s = JT:GetModuleSettings("PetReminders")
-        if s and s.unlockPosition then
-            self:StartMoving()
-        end
-    end)
-
-    frame:SetScript("OnDragStop", function(self)
-        self:StopMovingOrSizing()
-
-        local point, _, relativePoint, x, y = self:GetPoint()
-        JT:SetModuleSetting("PetReminders", "framePosition", {
-            point = point,
-            relativePoint = relativePoint,
-            x = x,
-            y = y,
-        })
-    end)
 
     -- Icon texture
     local icon = frame:CreateTexture(nil, "OVERLAY")
@@ -396,31 +361,23 @@ function PetReminders:GetOptions()
     return {
         { type = "header",      label = "Pet Reminders" },
         { type = "description", text = "Alerts when pet is missing or in passive mode" },
-        { type = "checkbox",    label = "Enabled",                    key = "enabled",         default = true  },
-        { type = "checkbox",    label = "Hide warnings during combat", key = "hideInCombat",   default = true  },
-        { type = "checkbox",    label = "Unlock position",            key = "unlockPosition",  default = false },
-        { type = "slider",      label = "Font Size",                  key = "fontSize",        min = 24, max = 60, step = 2, default = 36 },
+        { type = "checkbox",    label = "Enabled",                    key = "enabled",       default = true  },
+        { type = "checkbox",    label = "Hide warnings during combat", key = "hideInCombat", default = true  },
+        { type = "slider",      label = "Font Size",                  key = "fontSize",      min = 24, max = 60, step = 2,    default = 36 },
+        { type = "slider",      label = "Position X",                 key = "posX",          min = -900, max = 900, step = 1, default = 0  },
+        { type = "slider",      label = "Position Y",                 key = "posY",          min = -500, max = 500, step = 1, default = 280 },
     }
 end
 
--- Module interface: Apply unlock/lock state to frame backdrop
-function PetReminders:ApplyUnlockState()
+-- Module interface: Apply saved position to frame
+function PetReminders:ApplyPosition()
     if not warningFrame then return end
-
     local settings = JT:GetModuleSettings("PetReminders")
     if not settings then return end
-
-    if settings.unlockPosition then
-        warningFrame:SetBackdrop(UNLOCK_BACKDROP)
-        warningFrame:SetBackdropColor(0.1, 0.1, 0.1, 0.8)
-        warningFrame:SetBackdropBorderColor(0.4, 0.4, 0.6, 1)
-        -- Show the frame so the user can see/drag it
-        warningFrame:Show()
-    else
-        warningFrame:SetBackdrop(nil)
-        -- Re-evaluate display; if no warning is active this will hide the frame
-        UpdateDisplay()
-    end
+    local x = settings.posX or 0
+    local y = settings.posY or 280
+    warningFrame:ClearAllPoints()
+    warningFrame:SetPoint("CENTER", UIParent, "CENTER", x, y)
 end
 
 -- Module interface: Apply settings to UI
@@ -511,8 +468,8 @@ end
 function PetReminders:OnSettingChanged(key, value)
     if key == "fontSize" then
         self:ApplySettings()
-    elseif key == "unlockPosition" then
-        self:ApplyUnlockState()
+    elseif key == "posX" or key == "posY" then
+        self:ApplyPosition()
     elseif key == "hideInCombat" then
         -- Immediately update display based on new combat hiding setting
         UpdateDisplay()
