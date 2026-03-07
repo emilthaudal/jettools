@@ -59,6 +59,19 @@ local defaults = {
                 y = 280,
             },
         },
+        StealthReminder = {
+            enabled = false,
+            showWhenStealthed = true,
+            hideWhenResting = true,
+            unlockPosition = false,
+            fontSize = 24,
+            framePosition = {
+                point = "CENTER",
+                relativePoint = "CENTER",
+                x = 0,
+                y = 150,
+            },
+        },
     },
 }
 
