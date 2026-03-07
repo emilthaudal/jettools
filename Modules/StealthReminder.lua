@@ -20,14 +20,6 @@ local GetSpecializationInfo = GetSpecializationInfo
 local DRUID_FERAL_SPEC_ID    = 103
 local DRUID_GUARDIAN_SPEC_ID = 104
 
--- Backdrop shown when position is unlocked (drag mode)
-local UNLOCK_BACKDROP = {
-    bgFile   = "Interface\\Tooltips\\UI-Tooltip-Background",
-    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-    tile     = true, tileSize = 16, edgeSize = 16,
-    insets   = { left = 4, right = 4, top = 4, bottom = 4 },
-}
-
 -- Module state
 local isEnabled      = false
 local inCombat       = false
@@ -72,21 +64,7 @@ local function UpdateDisplay()
     local settings = JT:GetModuleSettings("StealthReminder")
     if not settings then return end
 
-    -- Unlock / drag mode: always show the frame with a backdrop so the user
-    -- can see and reposition it regardless of game state
-    if settings.unlockPosition then
-        warningFrame:SetBackdrop(UNLOCK_BACKDROP)
-        warningFrame:SetBackdropColor(0.1, 0.1, 0.1, 0.8)
-        warningFrame:SetBackdropBorderColor(0.4, 0.4, 0.6, 1)
-        warningFrame:EnableMouse(true)
-        warningText:SetText("DRAG TO REPOSITION")
-        warningText:SetTextColor(1, 0.8, 0)
-        warningFrame:Show()
-        return
-    end
-
     -- Normal mode: mouse interaction disabled
-    warningFrame:SetBackdrop(nil)
     warningFrame:EnableMouse(false)
 
     -- Must be enabled
@@ -142,45 +120,21 @@ end
 local function CreateWarningFrame()
     if warningFrame then return end
 
-    warningFrame = CreateFrame("Frame", "JetToolsStealthReminder", UIParent, "BackdropTemplate")
+    warningFrame = CreateFrame("Frame", "JetToolsStealthReminder", UIParent)
     warningFrame:SetFrameStrata("MEDIUM")
     warningFrame:SetClampedToScreen(true)
-    warningFrame:SetMovable(true)
-    warningFrame:RegisterForDrag("LeftButton")
 
     -- Load saved position or use a sensible default
     local settings = JT:GetModuleSettings("StealthReminder")
-    local pos = settings and settings.framePosition
-    if pos then
-        warningFrame:SetPoint(pos.point, UIParent, pos.relativePoint, pos.x, pos.y)
-    else
-        warningFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 150)
-    end
+    local x = (settings and settings.posX) or 0
+    local y = (settings and settings.posY) or 150
+    warningFrame:SetPoint("CENTER", UIParent, "CENTER", x, y)
 
     -- Size will be driven by font size; start with a reasonable default
     warningFrame:SetSize(220, 40)
 
     warningText = warningFrame:CreateFontString(nil, "OVERLAY")
     warningText:SetPoint("CENTER")
-
-    -- Drag: only when unlockPosition is on
-    warningFrame:SetScript("OnDragStart", function(self)
-        local s = JT:GetModuleSettings("StealthReminder")
-        if s and s.unlockPosition then
-            self:StartMoving()
-        end
-    end)
-
-    warningFrame:SetScript("OnDragStop", function(self)
-        self:StopMovingOrSizing()
-        local point, _, relativePoint, x, y = self:GetPoint()
-        JT:SetModuleSetting("StealthReminder", "framePosition", {
-            point        = point,
-            relativePoint = relativePoint,
-            x            = x,
-            y            = y,
-        })
-    end)
 
     warningFrame:Hide()
 
@@ -206,6 +160,16 @@ function StealthReminder:ApplySettings()
     end
 end
 
+function StealthReminder:ApplyPosition()
+    if not warningFrame then return end
+    local settings = JT:GetModuleSettings("StealthReminder")
+    if not settings then return end
+    local x = settings.posX or 0
+    local y = settings.posY or 150
+    warningFrame:ClearAllPoints()
+    warningFrame:SetPoint("CENTER", UIParent, "CENTER", x, y)
+end
+
 -- ──────────────────────────────────────────────────────────────
 -- Options
 -- ──────────────────────────────────────────────────────────────
@@ -216,8 +180,9 @@ function StealthReminder:GetOptions()
         { type = "checkbox", label = "Enabled",             key = "enabled",           default = false },
         { type = "checkbox", label = "Show when stealthed", key = "showWhenStealthed", default = true  },
         { type = "checkbox", label = "Hide when resting",   key = "hideWhenResting",   default = true  },
-        { type = "checkbox", label = "Unlock position",     key = "unlockPosition",    default = false },
-        { type = "slider",   label = "Font Size",           key = "fontSize",          min = 12, max = 48, step = 2, default = 24 },
+        { type = "slider",   label = "Font Size",           key = "fontSize",          min = 12, max = 48, step = 2,    default = 24  },
+        { type = "slider",   label = "Position X",          key = "posX",              min = -900, max = 900, step = 1, default = 0   },
+        { type = "slider",   label = "Position Y",          key = "posY",              min = -500, max = 500, step = 1, default = 150 },
     }
 end
 
@@ -235,14 +200,6 @@ eventFrame:SetScript("OnEvent", function(self, event, ...)
         stealthed    = IsStealthed()
         inCombat     = UnitAffectingCombat("player") and true or false
         isResting    = IsResting() and true or false
-
-        -- Restore saved frame position now that the frame exists
-        local settings = JT:GetModuleSettings("StealthReminder")
-        local pos = settings and settings.framePosition
-        if warningFrame and pos then
-            warningFrame:ClearAllPoints()
-            warningFrame:SetPoint(pos.point, UIParent, pos.relativePoint, pos.x, pos.y)
-        end
 
         UpdateDisplay()
         return
@@ -312,6 +269,8 @@ end
 function StealthReminder:OnSettingChanged(key, value)
     if key == "fontSize" then
         self:ApplySettings()
+    elseif key == "posX" or key == "posY" then
+        self:ApplyPosition()
     end
     -- All other keys (enabled toggle, checkboxes) go through Core which
     -- calls Enable/Disable for "enabled"; for the rest, UpdateDisplay handles
