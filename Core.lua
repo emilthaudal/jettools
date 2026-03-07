@@ -34,8 +34,8 @@ local defaults = {
             enabled = true,
         },
         CDMAuraRemover = {
-            enabled = true,
-            enableAuraOverride = true,
+            enabled = false,
+            enableAuraOverride = false,
         },
         CharacterStatFormatting = {
             enabled = true,
@@ -44,7 +44,7 @@ local defaults = {
             enabled = true,
         },
         CombatStatus = {
-            enabled = true,
+            enabled = false,
             fontSize = 24,
             fontFace = "Friz Quadrata TT",
         },
@@ -94,7 +94,7 @@ end
 function JT:SetModuleEnabled(name, enabled)
     if JetToolsDB and JetToolsDB.modules and JetToolsDB.modules[name] then
         JetToolsDB.modules[name].enabled = enabled
-        
+
         local module = self.modules[name]
         if module then
             if enabled and module.Enable then
@@ -110,7 +110,7 @@ end
 function JT:SetModuleSetting(name, key, value)
     if JetToolsDB and JetToolsDB.modules and JetToolsDB.modules[name] then
         JetToolsDB.modules[name][key] = value
-        
+
         local module = self.modules[name]
         if module and module.OnSettingChanged then
             module:OnSettingChanged(key, value)
@@ -128,16 +128,15 @@ frame:SetScript("OnEvent", function(self, event, arg1)
         -- Initialize saved variables with defaults
         JetToolsDB = JetToolsDB or {}
         DeepCopy(defaults, JetToolsDB)
-        
+
         print("|cff00aaffJetTools|r loaded. Type |cffaa66ff/jt|r for options.")
-        
     elseif event == "PLAYER_LOGIN" then
         -- Initialize all registered modules
         for name, module in pairs(JT.modules) do
             if module.Init then
                 module:Init()
             end
-            
+
             if JT:IsModuleEnabled(name) and module.Enable then
                 module:Enable()
             end
