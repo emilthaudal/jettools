@@ -55,3 +55,7 @@ todo.txt
 *.local.lua
 
 .opencode/
+
+# Dolt database files (added by bd init)
+.dolt/
+*.db
