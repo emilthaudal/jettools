@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "server",
+  "dolt_database": "jettools",
+  "project_id": "8e25bed9-8141-4c33-a302-fa261fc91140"
+}
