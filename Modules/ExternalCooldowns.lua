@@ -402,6 +402,47 @@ eventFrame:SetScript("OnEvent", function(self, event, ...)
             end
         end
 
+        -- Immediately refresh display so the countdown appears without
+        -- waiting for the next ticker cycle (which may be skipped solo).
+        UpdateDisplay()
+
+    elseif event == "UNIT_SPELLCAST_SUCCEEDED" then
+        -- Fallback for the local player's own casts. CLEU can miss self-casts
+        -- when not in a group, so we handle the player's casts directly.
+        local unit, _, spellID = ...
+        if unit ~= "player" then return end
+
+        local spell = TRACKED_SPELLS[spellID]
+        if not spell then return end
+
+        local playerGUID = UnitGUID("player")
+        local now = GetTime()
+        local matched = false
+        for _, row in ipairs(trackedRows) do
+            if row.casterGUID == playerGUID and row.spellID == spellID then
+                row.expireAt = now + spell.cooldown
+                matched = true
+            end
+        end
+
+        if not matched then
+            -- Player row missing (e.g. module just enabled solo) — add it.
+            local name = UnitName("player") or "Unknown"
+            local _, classFile = UnitClass("player")
+            if classFile then
+                table.insert(trackedRows, {
+                    casterGUID  = playerGUID,
+                    casterName  = name,
+                    casterClass = classFile,
+                    spellID     = spellID,
+                    expireAt    = now + spell.cooldown,
+                })
+                guidToClass[playerGUID] = classFile
+            end
+        end
+
+        UpdateDisplay()
+
     elseif event == "GROUP_ROSTER_UPDATE" or event == "PLAYER_ENTERING_WORLD" then
         RebuildRoster()
         UpdateDisplay()
@@ -439,23 +480,25 @@ function ExternalCooldowns:Enable()
     RebuildRoster()
 
     eventFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+    eventFrame:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
     eventFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
     eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 
     -- Ticker: refresh visible timers without waiting for an event
     if not ticker then
         ticker = C_Timer.NewTicker(TICKER_RATE, function()
-            if isEnabled then
-                -- Respect showOnlyInGroup setting
-                local settings = JT:GetModuleSettings(MODULE_NAME)
-                if settings and settings.showOnlyInGroup then
-                    local inGroup = GetNumGroupMembers() > 0
-                    if not inGroup then
-                        if displayFrame then displayFrame:Hide() end
-                        return
-                    end
-                end
-                UpdateDisplay()
+            if not isEnabled then return end
+
+            -- Respect showOnlyInGroup setting: hide frame but still run
+            -- UpdateDisplay so timer state stays current for when we rejoin.
+            local settings = JT:GetModuleSettings(MODULE_NAME)
+            local inGroup = GetNumGroupMembers() > 0
+            local hideForSolo = settings and settings.showOnlyInGroup and not inGroup
+
+            UpdateDisplay()
+
+            if hideForSolo and displayFrame then
+                displayFrame:Hide()
             end
         end)
     end
