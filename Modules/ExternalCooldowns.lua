@@ -276,7 +276,7 @@ local function UpdateDisplay()
                                math_floor(classColor.g * 255),
                                math_floor(classColor.b * 255))
                            or "|cffcccccc"
-        local labelText  = nameHex .. data.casterName .. "|r \xe2\x80\x94 " .. spell.name
+        local labelText  = nameHex .. data.casterName .. "|r - " .. spell.name
 
         row.label:SetText(labelText)
         row.label:SetFont("Fonts\\FRIZQT__.TTF", fontSize, "OUTLINE")
@@ -367,6 +367,12 @@ eventFrame:SetScript("OnEvent", function(self, event, ...)
         local spell = TRACKED_SPELLS[spellID]
         if not spell then return end
 
+        local settings = JT:GetModuleSettings(MODULE_NAME)
+        if settings and settings.debugMode then
+            print(string_format("|cff00aaffJetTools EC|r: CLEU SPELL_CAST_SUCCESS spellID %d (%s) sourceGUID %s",
+                spellID, spell.name, sourceGUID))
+        end
+
         -- Update expireAt for the matching row(s)
         local now = GetTime()
         local matched = false
@@ -407,37 +413,45 @@ eventFrame:SetScript("OnEvent", function(self, event, ...)
         UpdateDisplay()
 
     elseif event == "UNIT_SPELLCAST_SUCCEEDED" then
-        -- Fallback for the local player's own casts. CLEU can miss self-casts
-        -- when not in a group, so we handle the player's casts directly.
+        -- Handles casts for "player" and group tokens (party1-4, raid1-40).
+        -- More reliable than CLEU for out-of-combat and city scenarios.
         local unit, _, spellID = ...
-        if unit ~= "player" then return end
 
         local spell = TRACKED_SPELLS[spellID]
         if not spell then return end
 
-        local playerGUID = UnitGUID("player")
+        local guid = UnitGUID(unit)
+        if not guid then return end
+
+        local settings = JT:GetModuleSettings(MODULE_NAME)
+        if settings and settings.debugMode then
+            local name = UnitName(unit) or unit
+            print(string_format("|cff00aaffJetTools EC|r: %s cast %s (spellID %d) via UNIT_SPELLCAST_SUCCEEDED",
+                name, spell.name, spellID))
+        end
+
         local now = GetTime()
         local matched = false
         for _, row in ipairs(trackedRows) do
-            if row.casterGUID == playerGUID and row.spellID == spellID then
+            if row.casterGUID == guid and row.spellID == spellID then
                 row.expireAt = now + spell.cooldown
                 matched = true
             end
         end
 
         if not matched then
-            -- Player row missing (e.g. module just enabled solo) — add it.
-            local name = UnitName("player") or "Unknown"
-            local _, classFile = UnitClass("player")
+            -- Unit not yet in roster; add if they're a known group member.
+            local _, classFile = UnitClass(unit)
             if classFile then
+                local name = UnitName(unit) or "Unknown"
+                guidToClass[guid] = classFile
                 table.insert(trackedRows, {
-                    casterGUID  = playerGUID,
+                    casterGUID  = guid,
                     casterName  = name,
                     casterClass = classFile,
                     spellID     = spellID,
                     expireAt    = now + spell.cooldown,
                 })
-                guidToClass[playerGUID] = classFile
             end
         end
 
@@ -457,11 +471,12 @@ function ExternalCooldowns:GetOptions()
     return {
         { type = "header",      label = "External Cooldowns" },
         { type = "description", text = "Tracks defensive cooldowns used by group members. Pre-populates from group composition." },
-        { type = "checkbox",    label = "Enabled",          key = "enabled",         default = false },
+        { type = "checkbox",    label = "Enabled",            key = "enabled",         default = false },
         { type = "checkbox",    label = "Show only in group", key = "showOnlyInGroup", default = true  },
-        { type = "slider",      label = "Font Size",        key = "fontSize",        min = 10, max = 20, step = 1, default = 13 },
-        { type = "slider",      label = "Position X",       key = "posX",            min = -900, max = 900, step = 1, default = -750 },
-        { type = "slider",      label = "Position Y",       key = "posY",            min = -500, max = 500, step = 1, default = 300  },
+        { type = "checkbox",    label = "Debug logging",      key = "debugMode",       default = false },
+        { type = "slider",      label = "Font Size",          key = "fontSize",        min = 10, max = 20, step = 1, default = 13 },
+        { type = "slider",      label = "Position X",         key = "posX",            min = -900, max = 900, step = 1, default = -750 },
+        { type = "slider",      label = "Position Y",         key = "posY",            min = -500, max = 500, step = 1, default = 300  },
     }
 end
 
@@ -537,5 +552,9 @@ function ExternalCooldowns:OnSettingChanged(key, value)
         self:ApplyPosition()
     elseif key == "showOnlyInGroup" or key == "fontSize" then
         UpdateDisplay()
+    elseif key == "debugMode" then
+        if value then
+            print("|cff00aaffJetTools EC|r: Debug logging enabled. Cast events will print to chat.")
+        end
     end
 end
