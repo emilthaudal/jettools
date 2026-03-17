@@ -19,6 +19,7 @@ local MODULE_ORDER = {
     "CombatStatus",
     "PetReminders",
     "StealthReminder",
+    "ExternalCooldowns",
 }
 
 -- Create the options frame

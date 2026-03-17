@@ -63,6 +63,13 @@ local defaults = {
             posX = 0,
             posY = 150,
         },
+        ExternalCooldowns = {
+            enabled = false,
+            showOnlyInGroup = true,
+            fontSize = 13,
+            posX = -750,
+            posY = 300,
+        },
     },
 }
 

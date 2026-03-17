@@ -25,4 +25,5 @@ Modules/SlashCommands.lua
 Modules/CombatStatus.lua
 Modules/PetReminders.lua
 Modules/StealthReminder.lua
+Modules/ExternalCooldowns.lua
 
