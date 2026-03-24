@@ -67,7 +67,7 @@ local MODULE_DEFAULTS = {
     },
 }
 
--- Deep copy helper
+-- Deep copy helper (fills in missing keys from src into dest)
 local function DeepCopy(src, dest)
     for k, v in pairs(src) do
         if type(v) == "table" then
@@ -79,7 +79,7 @@ local function DeepCopy(src, dest)
     end
 end
 
--- Full deep clone (for creating new profiles)
+-- Full deep clone (returns a fresh independent copy)
 local function DeepClone(src)
     local clone = {}
     for k, v in pairs(src) do
@@ -113,9 +113,23 @@ local function GetCharKey()
     return realm .. "-" .. name
 end
 
--- Get the active profile name for this character
+-- Get the active profile name for this character.
+-- Checks spec override first, then character assignment, then "Default".
 function JT:GetActiveProfileName()
     local charKey = GetCharKey()
+
+    -- Check spec override
+    local specAssignments = JetToolsDB.specAssignments
+    if specAssignments and specAssignments[charKey] then
+        local specIndex = C_SpecializationInfo.GetSpecialization()
+        if specIndex then
+            local specOverride = specAssignments[charKey][specIndex]
+            if specOverride and JetToolsDB.profiles[specOverride] then
+                return specOverride
+            end
+        end
+    end
+
     return JetToolsDB.profileAssignments[charKey] or "Default"
 end
 
@@ -135,18 +149,16 @@ function JT:GetProfileNames()
     return names
 end
 
--- Create a new profile (cloned from Default or current active profile)
+-- Create a new profile from defaults (not cloned from active)
 function JT:CreateProfile(name)
     if not name or name == "" then return false end
     if JetToolsDB.profiles[name] then return false end -- already exists
 
-    -- Clone from the active profile so the new one inherits current settings
-    local activeProfile = self:GetActiveProfile()
-    JetToolsDB.profiles[name] = { modules = DeepClone(activeProfile.modules) }
+    JetToolsDB.profiles[name] = { modules = BuildDefaultModules() }
     return true
 end
 
--- Delete a profile (cannot delete "Default" or the last remaining profile)
+-- Delete a profile (cannot delete "Default")
 function JT:DeleteProfile(name)
     if name == "Default" then return false end
     if not JetToolsDB.profiles[name] then return false end
@@ -155,6 +167,17 @@ function JT:DeleteProfile(name)
     for charKey, profileName in pairs(JetToolsDB.profileAssignments) do
         if profileName == name then
             JetToolsDB.profileAssignments[charKey] = "Default"
+        end
+    end
+
+    -- Clear any spec overrides pointing to this profile
+    if JetToolsDB.specAssignments then
+        for charKey, specMap in pairs(JetToolsDB.specAssignments) do
+            for specIndex, profileName in pairs(specMap) do
+                if profileName == name then
+                    specMap[specIndex] = nil
+                end
+            end
         end
     end
 
@@ -192,6 +215,91 @@ function JT:SetActiveProfile(name)
     end
 
     return true
+end
+
+-- Copy settings from sourceName into the current active profile, then live-reload
+function JT:CopyProfile(sourceName)
+    if not sourceName or not JetToolsDB.profiles[sourceName] then return false end
+    local activeProfile = self:GetActiveProfile()
+    if not activeProfile then return false end
+
+    local source = JetToolsDB.profiles[sourceName]
+
+    -- Disable all currently-enabled modules before swapping data
+    for moduleName, module in pairs(self.modules) do
+        if self:IsModuleEnabled(moduleName) and module.Disable then
+            module:Disable()
+        end
+    end
+
+    -- Overwrite active profile modules with a clone of source
+    activeProfile.modules = DeepClone(source.modules or {})
+    -- Fill in any keys missing from defaults
+    DeepCopy({ modules = MODULE_DEFAULTS }, activeProfile)
+
+    -- Re-enable modules enabled in the new settings
+    for moduleName, module in pairs(self.modules) do
+        if self:IsModuleEnabled(moduleName) and module.Enable then
+            module:Enable()
+        end
+    end
+
+    return true
+end
+
+-- Reset the current active profile to defaults, then live-reload
+function JT:ResetProfile()
+    local activeProfile = self:GetActiveProfile()
+    if not activeProfile then return false end
+
+    -- Disable all currently-enabled modules
+    for moduleName, module in pairs(self.modules) do
+        if self:IsModuleEnabled(moduleName) and module.Disable then
+            module:Disable()
+        end
+    end
+
+    -- Wipe and replace with fresh defaults
+    activeProfile.modules = BuildDefaultModules()
+
+    -- Re-enable modules enabled in the reset profile
+    for moduleName, module in pairs(self.modules) do
+        if self:IsModuleEnabled(moduleName) and module.Enable then
+            module:Enable()
+        end
+    end
+
+    return true
+end
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Spec override API
+-- ─────────────────────────────────────────────────────────────────────────────
+
+-- Get the profile name assigned to a specific spec slot for this character (or nil)
+function JT:GetSpecProfileName(specIndex)
+    local charKey = GetCharKey()
+    local specAssignments = JetToolsDB.specAssignments
+    if not specAssignments or not specAssignments[charKey] then return nil end
+    return specAssignments[charKey][specIndex]
+end
+
+-- Assign a profile to a spec slot for this character
+function JT:SetSpecProfile(specIndex, profileName)
+    if not specIndex then return end
+    local charKey = GetCharKey()
+    JetToolsDB.specAssignments = JetToolsDB.specAssignments or {}
+    JetToolsDB.specAssignments[charKey] = JetToolsDB.specAssignments[charKey] or {}
+    JetToolsDB.specAssignments[charKey][specIndex] = profileName
+end
+
+-- Clear the spec override for a spec slot
+function JT:ClearSpecProfile(specIndex)
+    if not specIndex then return end
+    local charKey = GetCharKey()
+    if not JetToolsDB.specAssignments then return end
+    if not JetToolsDB.specAssignments[charKey] then return end
+    JetToolsDB.specAssignments[charKey][specIndex] = nil
 end
 
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -247,6 +355,7 @@ end
 local frame = CreateFrame("Frame")
 frame:RegisterEvent("ADDON_LOADED")
 frame:RegisterEvent("PLAYER_LOGIN")
+frame:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED")
 
 frame:SetScript("OnEvent", function(self, event, arg1)
     if event == "ADDON_LOADED" and arg1 == addonName then
@@ -261,6 +370,9 @@ frame:SetScript("OnEvent", function(self, event, arg1)
 
         -- Per-character profile assignments
         JetToolsDB.profileAssignments = JetToolsDB.profileAssignments or {}
+
+        -- Per-character per-spec profile overrides
+        JetToolsDB.specAssignments = JetToolsDB.specAssignments or {}
 
         -- Fill in any missing default keys for every existing profile
         for _, profile in pairs(JetToolsDB.profiles) do
@@ -285,6 +397,25 @@ frame:SetScript("OnEvent", function(self, event, arg1)
             if JT:IsModuleEnabled(name) and module.Enable then
                 module:Enable()
             end
+        end
+
+    elseif event == "ACTIVE_TALENT_GROUP_CHANGED" then
+        -- Auto-switch profile if the new spec has an override assigned
+        local charKey = GetCharKey()
+        local specAssignments = JetToolsDB.specAssignments
+        if not specAssignments or not specAssignments[charKey] then return end
+
+        local specIndex = C_SpecializationInfo.GetSpecialization()
+        if not specIndex then return end
+
+        local overrideProfile = specAssignments[charKey][specIndex]
+        if not overrideProfile or not JetToolsDB.profiles[overrideProfile] then return end
+
+        -- Only switch if it differs from current assignment
+        local currentAssigned = JetToolsDB.profileAssignments[charKey] or "Default"
+        if currentAssigned ~= overrideProfile then
+            JT:SetActiveProfile(overrideProfile)
+            print("|cff00aaffJetTools|r: Switched to profile '" .. overrideProfile .. "' for this spec.")
         end
     end
 end)

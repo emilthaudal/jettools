@@ -1,5 +1,5 @@
 -- JetTools Options Panel
--- AF-based: left sidebar (module nav) + right scroll pane + profile management
+-- AF-based: left sidebar (module nav) + right scroll pane + Profiles tab
 
 local addonName, JT = ...
 
@@ -8,7 +8,10 @@ local AF = _G.AbstractFramework
 
 local optionsFrame = nil
 
--- Defined display order for modules in the sidebar
+-- Sentinel value for the Profiles tab
+local PROFILES_TAB = "Profiles"
+
+-- Defined display order for modules in the sidebar (Profiles is last)
 local MODULE_ORDER = {
     "RangeIndicator",
     "CurrentExpansionFilter",
@@ -21,6 +24,7 @@ local MODULE_ORDER = {
     "CombatStatus",
     "PetReminders",
     "StealthReminder",
+    PROFILES_TAB,
 }
 
 -- Human-friendly display names for sidebar buttons
@@ -36,6 +40,45 @@ local MODULE_LABELS = {
     CombatStatus            = "Combat Status",
     PetReminders            = "Pet Reminders",
     StealthReminder         = "Stealth Reminder",
+    [PROFILES_TAB]          = "Profiles",
+}
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- StaticPopup dialogs (defined at file level, before any function uses them)
+-- ─────────────────────────────────────────────────────────────────────────────
+
+StaticPopupDialogs["JETTOOLS_COPY_PROFILE"] = {
+    text = "Copy settings from '%s' into the current profile?\nThis will overwrite all current settings.",
+    button1 = "Copy",
+    button2 = "Cancel",
+    OnAccept = function(self, data)
+        if data and data.sourceName then
+            JT:CopyProfile(data.sourceName)
+            if JT.RefreshProfilePane then
+                JT.RefreshProfilePane()
+            end
+        end
+    end,
+    timeout = 0,
+    whileDead = true,
+    hideOnEscape = true,
+    preferredIndex = 3,
+}
+
+StaticPopupDialogs["JETTOOLS_RESET_PROFILE"] = {
+    text = "Reset the current profile to defaults?\nAll settings will be lost.",
+    button1 = "Reset",
+    button2 = "Cancel",
+    OnAccept = function(self, data)
+        JT:ResetProfile()
+        if JT.RefreshProfilePane then
+            JT.RefreshProfilePane()
+        end
+    end,
+    timeout = 0,
+    whileDead = true,
+    hideOnEscape = true,
+    preferredIndex = 3,
 }
 
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -77,7 +120,6 @@ local function BuildOptionControl(parent, moduleName, schema, yOffset)
     end
 
     if schemaType == "header" then
-        -- AF titled pane: underlined section header
         local pane = AF.CreateTitledPane(parent, schema.label, CONTENT_WIDTH, 20)
         AF.SetPoint(pane, "TOPLEFT", parent, "TOPLEFT", 0, yOffset)
         return yOffset - 30
@@ -136,7 +178,6 @@ local function BuildOptionControl(parent, moduleName, schema, yOffset)
         return yOffset - 50
 
     elseif schemaType == "dropdown" then
-        -- Build items list from schema.options (array or key=value table)
         local items = {}
         if type(schema.options) == "table" then
             if schema.options[1] then
@@ -157,7 +198,6 @@ local function BuildOptionControl(parent, moduleName, schema, yOffset)
         dd:SetOnSelect(function(value)
             JT:SetModuleSetting(moduleName, key, value)
         end)
-        -- Set current selection by value
         dd:SetSelectedValue(currentValue)
         return yOffset - 55
 
@@ -188,12 +228,261 @@ local function BuildOptionControl(parent, moduleName, schema, yOffset)
 end
 
 -- ─────────────────────────────────────────────────────────────────────────────
+-- Profile pane
+-- ─────────────────────────────────────────────────────────────────────────────
+
+-- Stored so StaticPopup callbacks can trigger a refresh
+JT.RefreshProfilePane = nil  -- set when profile pane is active
+
+local function PopulateProfilePane(scrollParent)
+    local scrollContent = scrollParent.scrollContent
+    ClearFrame(scrollContent)
+
+    local yOffset = -8
+
+    -- ── Section: Active Profile ───────────────────────────────────────────────
+
+    local profileHeader = AF.CreateTitledPane(scrollContent, "Profile", CONTENT_WIDTH, 20)
+    AF.SetPoint(profileHeader, "TOPLEFT", scrollContent, "TOPLEFT", 0, yOffset)
+    yOffset = yOffset - 30
+
+    -- Profile selector dropdown
+    local profileItems = {}
+    for _, name in ipairs(JT:GetProfileNames()) do
+        table.insert(profileItems, { text = name, value = name })
+    end
+
+    local profileDD = AF.CreateDropdown(scrollContent, CONTENT_WIDTH - INDENT, 10)
+    AF.SetPoint(profileDD, "TOPLEFT", scrollContent, "TOPLEFT", INDENT, yOffset)
+    profileDD:SetLabel("Active Profile")
+    profileDD:SetItems(profileItems)
+    profileDD:SetSelectedValue(JT:GetActiveProfileName())
+    profileDD:SetOnSelect(function(value)
+        JT:SetActiveProfile(value)
+        -- Rebuild pane to reflect new profile state
+        PopulateProfilePane(scrollParent)
+    end)
+    yOffset = yOffset - 55
+
+    -- ── Section: Spec Overrides ───────────────────────────────────────────────
+
+    local numSpecs = GetNumSpecializations and GetNumSpecializations() or 0
+    if numSpecs > 0 then
+        yOffset = yOffset - 8
+        local specHeader = AF.CreateTitledPane(scrollContent, "Spec-Specific Profiles", CONTENT_WIDTH, 20)
+        AF.SetPoint(specHeader, "TOPLEFT", scrollContent, "TOPLEFT", 0, yOffset)
+        yOffset = yOffset - 30
+
+        -- Build items including "None" as the first entry
+        local specProfileItems = { { text = "None (use character profile)", value = "" } }
+        for _, name in ipairs(JT:GetProfileNames()) do
+            table.insert(specProfileItems, { text = name, value = name })
+        end
+
+        for i = 1, numSpecs do
+            local specId, specName, _, specIcon = C_SpecializationInfo.GetSpecializationInfo(i)
+            if specId then
+                -- Icon + name label
+                local iconStr = specIcon and ("|T" .. specIcon .. ":16:16:0:0|t ") or ""
+                local specLabel = iconStr .. (specName or ("Spec " .. i))
+
+                local specDD = AF.CreateDropdown(scrollContent, CONTENT_WIDTH - INDENT, 10)
+                AF.SetPoint(specDD, "TOPLEFT", scrollContent, "TOPLEFT", INDENT, yOffset)
+                specDD:SetLabel(specLabel)
+                specDD:SetItems(specProfileItems)
+
+                local currentOverride = JT:GetSpecProfileName(i) or ""
+                specDD:SetSelectedValue(currentOverride)
+
+                -- Capture i in a local for the closure
+                local specIndex = i
+                specDD:SetOnSelect(function(value)
+                    if value == "" then
+                        JT:ClearSpecProfile(specIndex)
+                    else
+                        JT:SetSpecProfile(specIndex, value)
+                    end
+                end)
+                yOffset = yOffset - 55
+            end
+        end
+    end
+
+    -- ── Section: New Profile ──────────────────────────────────────────────────
+
+    yOffset = yOffset - 8
+    local newHeader = AF.CreateTitledPane(scrollContent, "New Profile", CONTENT_WIDTH, 20)
+    AF.SetPoint(newHeader, "TOPLEFT", scrollContent, "TOPLEFT", 0, yOffset)
+    yOffset = yOffset - 30
+
+    local newDesc = AF.CreateFontString(scrollContent,
+        "Creates a new profile starting from default settings.", "disabled")
+    AF.SetPoint(newDesc, "TOPLEFT", scrollContent, "TOPLEFT", INDENT, yOffset)
+    newDesc:SetWidth(CONTENT_WIDTH - INDENT)
+    newDesc:SetJustifyH("LEFT")
+    yOffset = yOffset - 22
+
+    local newEditBox = AF.CreateEditBox(scrollContent, "Profile Name",
+        CONTENT_WIDTH - INDENT - 80 - 8, 28, "normal")
+    AF.SetPoint(newEditBox, "TOPLEFT", scrollContent, "TOPLEFT", INDENT, yOffset)
+
+    local createBtn = AF.CreateButton(scrollContent, "Create", "accent", 80, 28)
+    AF.SetPoint(createBtn, "LEFT", newEditBox, "RIGHT", 8, 0)
+    createBtn:SetOnClick(function()
+        local name = newEditBox:GetText()
+        if not name or name == "" then return end
+        if JT:CreateProfile(name) then
+            JT:SetActiveProfile(name)
+            PopulateProfilePane(scrollParent)
+        else
+            print("|cff00aaffJetTools|r: Profile '" .. name .. "' already exists.")
+        end
+    end)
+    yOffset = yOffset - 40
+
+    -- ── Section: Copy From ────────────────────────────────────────────────────
+
+    yOffset = yOffset - 8
+    local copyHeader = AF.CreateTitledPane(scrollContent, "Copy From", CONTENT_WIDTH, 20)
+    AF.SetPoint(copyHeader, "TOPLEFT", scrollContent, "TOPLEFT", 0, yOffset)
+    yOffset = yOffset - 30
+
+    local copyDesc = AF.CreateFontString(scrollContent,
+        "Overwrites the current profile settings with those from another profile.", "disabled")
+    AF.SetPoint(copyDesc, "TOPLEFT", scrollContent, "TOPLEFT", INDENT, yOffset)
+    copyDesc:SetWidth(CONTENT_WIDTH - INDENT)
+    copyDesc:SetJustifyH("LEFT")
+    yOffset = yOffset - 22
+
+    -- Populate only with profiles other than the active one
+    local activeName = JT:GetActiveProfileName()
+    local copyItems = {}
+    for _, name in ipairs(JT:GetProfileNames()) do
+        if name ~= activeName then
+            table.insert(copyItems, { text = name, value = name })
+        end
+    end
+
+    local copyDD = AF.CreateDropdown(scrollContent, CONTENT_WIDTH - INDENT - 80 - 8, 10)
+    AF.SetPoint(copyDD, "TOPLEFT", scrollContent, "TOPLEFT", INDENT, yOffset)
+    copyDD:SetLabel("Copy from")
+    copyDD:SetItems(copyItems)
+    if copyItems[1] then
+        copyDD:SetSelectedValue(copyItems[1].value)
+    end
+
+    local copyBtn = AF.CreateButton(scrollContent, "Copy", "accent", 80, 28)
+    AF.SetPoint(copyBtn, "TOPLEFT", scrollContent, "TOPLEFT",
+        INDENT + (CONTENT_WIDTH - INDENT - 80 - 8) + 8, yOffset - 14)
+    copyBtn:SetOnClick(function()
+        local getVal = copyDD.GetSelectedValue
+        local selectedValue = getVal and copyDD:GetSelectedValue()
+        if not selectedValue or selectedValue == "" then
+            if copyItems[1] then selectedValue = copyItems[1].value else return end
+        end
+        local dialog = StaticPopup_Show("JETTOOLS_COPY_PROFILE", selectedValue)
+        if dialog then
+            dialog.data = { sourceName = selectedValue }
+        end
+    end)
+    yOffset = yOffset - 55
+
+    -- ── Section: Reset Profile ────────────────────────────────────────────────
+
+    yOffset = yOffset - 8
+    local resetHeader = AF.CreateTitledPane(scrollContent, "Reset Profile", CONTENT_WIDTH, 20)
+    AF.SetPoint(resetHeader, "TOPLEFT", scrollContent, "TOPLEFT", 0, yOffset)
+    yOffset = yOffset - 30
+
+    local resetDesc = AF.CreateFontString(scrollContent,
+        "Resets the current profile (\"" .. activeName .. "\") back to default settings.", "disabled")
+    AF.SetPoint(resetDesc, "TOPLEFT", scrollContent, "TOPLEFT", INDENT, yOffset)
+    resetDesc:SetWidth(CONTENT_WIDTH - INDENT)
+    resetDesc:SetJustifyH("LEFT")
+    yOffset = yOffset - 22
+
+    local resetBtn = AF.CreateButton(scrollContent, "Reset to Defaults", "red", 160, 28)
+    AF.SetPoint(resetBtn, "TOPLEFT", scrollContent, "TOPLEFT", INDENT, yOffset)
+    resetBtn:SetOnClick(function()
+        StaticPopup_Show("JETTOOLS_RESET_PROFILE")
+    end)
+    yOffset = yOffset - 40
+
+    -- ── Section: Delete Profile ───────────────────────────────────────────────
+
+    yOffset = yOffset - 8
+    local deleteHeader = AF.CreateTitledPane(scrollContent, "Delete Profile", CONTENT_WIDTH, 20)
+    AF.SetPoint(deleteHeader, "TOPLEFT", scrollContent, "TOPLEFT", 0, yOffset)
+    yOffset = yOffset - 30
+
+    local deleteDesc = AF.CreateFontString(scrollContent,
+        "Permanently delete a profile. Cannot delete 'Default' or the active profile.",
+        "disabled")
+    AF.SetPoint(deleteDesc, "TOPLEFT", scrollContent, "TOPLEFT", INDENT, yOffset)
+    deleteDesc:SetWidth(CONTENT_WIDTH - INDENT)
+    deleteDesc:SetJustifyH("LEFT")
+    yOffset = yOffset - 32
+
+    -- Profiles eligible for deletion: not Default, not active
+    local deleteItems = {}
+    for _, name in ipairs(JT:GetProfileNames()) do
+        if name ~= "Default" and name ~= activeName then
+            table.insert(deleteItems, { text = name, value = name })
+        end
+    end
+
+    local deleteDD = AF.CreateDropdown(scrollContent, CONTENT_WIDTH - INDENT - 80 - 8, 10)
+    AF.SetPoint(deleteDD, "TOPLEFT", scrollContent, "TOPLEFT", INDENT, yOffset)
+    deleteDD:SetLabel("Delete profile")
+    deleteDD:SetItems(deleteItems)
+    if deleteItems[1] then
+        deleteDD:SetSelectedValue(deleteItems[1].value)
+    end
+
+    local deleteBtn = AF.CreateButton(scrollContent, "Delete", "red", 80, 28)
+    AF.SetPoint(deleteBtn, "TOPLEFT", scrollContent, "TOPLEFT",
+        INDENT + (CONTENT_WIDTH - INDENT - 80 - 8) + 8, yOffset - 14)
+    deleteBtn:SetOnClick(function()
+        local getVal = deleteDD.GetSelectedValue
+        local selectedValue = getVal and deleteDD:GetSelectedValue()
+        if not selectedValue or selectedValue == "" then
+            if deleteItems[1] then selectedValue = deleteItems[1].value else return end
+        end
+        if JT:DeleteProfile(selectedValue) then
+            PopulateProfilePane(scrollParent)
+        else
+            print("|cff00aaffJetTools|r: Cannot delete profile '" .. selectedValue .. "'.")
+        end
+    end)
+    yOffset = yOffset - 55
+
+    -- Update scroll frame content height
+    local totalHeight = math.abs(yOffset) + 16
+    scrollParent:SetContentHeight(math.max(totalHeight, 1))
+    scrollParent:ResetScroll()
+
+    -- Expose refresh so StaticPopup callbacks can trigger it
+    JT.RefreshProfilePane = function()
+        PopulateProfilePane(scrollParent)
+    end
+end
+
+-- ─────────────────────────────────────────────────────────────────────────────
 -- Module pane population
 -- ─────────────────────────────────────────────────────────────────────────────
 
 local currentModuleName = nil
 
 local function PopulateModulePane(scrollParent, moduleName)
+    -- Clear any stale profile pane refresh hook
+    JT.RefreshProfilePane = nil
+
+    if moduleName == PROFILES_TAB then
+        currentModuleName = PROFILES_TAB
+        PopulateProfilePane(scrollParent)
+        return
+    end
+
     local scrollContent = scrollParent.scrollContent
     ClearFrame(scrollContent)
     currentModuleName = moduleName
@@ -208,119 +497,10 @@ local function PopulateModulePane(scrollParent, moduleName)
         yOffset = BuildOptionControl(scrollContent, moduleName, item, yOffset)
     end
 
-    -- Tell the scroll frame the content height
     local totalHeight = math.abs(yOffset) + 16
     scrollParent:SetContentHeight(math.max(totalHeight, 1))
     scrollParent:ResetScroll()
 end
-
--- ─────────────────────────────────────────────────────────────────────────────
--- Profile management UI (top strip of the right pane)
--- ─────────────────────────────────────────────────────────────────────────────
-
-local profileDropdown = nil
-local activeScrollParent = nil  -- set when frame is built
-
-local function RefreshProfileDropdown()
-    if not profileDropdown then return end
-
-    local names = JT:GetProfileNames()
-    local items = {}
-    for _, name in ipairs(names) do
-        table.insert(items, { text = name, value = name })
-    end
-    profileDropdown:SetItems(items)
-    profileDropdown:SetSelectedValue(JT:GetActiveProfileName())
-end
-
-local function BuildProfileStrip(parent, scrollParent)
-    -- Label
-    local label = AF.CreateFontString(parent, "Profile:", "white")
-    AF.SetPoint(label, "TOPLEFT", parent, "TOPLEFT", 0, -10)
-
-    -- Dropdown (200px wide, max 8 items, standard downward orientation)
-    local dd = AF.CreateDropdown(parent, 200, 8)
-    AF.SetPoint(dd, "LEFT", label, "RIGHT", 8, 0)
-    dd:SetOnSelect(function(value)
-        JT:SetActiveProfile(value)
-        RefreshProfileDropdown()
-        if currentModuleName then
-            PopulateModulePane(scrollParent, currentModuleName)
-        end
-    end)
-    profileDropdown = dd
-
-    -- New Profile button
-    local newBtn = AF.CreateButton(parent, "New", "accent", 60, 22)
-    AF.SetPoint(newBtn, "LEFT", dd, "RIGHT", 6, 0)
-    newBtn:SetOnClick(function()
-        -- AF may not have ShowGlobalDialog; fall back to a simple StaticPopup
-        StaticPopup_Show("JETTOOLS_NEW_PROFILE")
-    end)
-
-    -- Delete Profile button
-    local delBtn = AF.CreateButton(parent, "Delete", "red", 60, 22)
-    AF.SetPoint(delBtn, "LEFT", newBtn, "RIGHT", 4, 0)
-    delBtn:SetOnClick(function()
-        local activeName = JT:GetActiveProfileName()
-        if activeName == "Default" then
-            print("|cff00aaffJetTools|r: Cannot delete the Default profile.")
-            return
-        end
-        if JT:DeleteProfile(activeName) then
-            JT:SetActiveProfile("Default")
-            RefreshProfileDropdown()
-            if currentModuleName then
-                PopulateModulePane(scrollParent, currentModuleName)
-            end
-        end
-    end)
-
-    RefreshProfileDropdown()
-end
-
--- StaticPopup for new profile name input
-StaticPopupDialogs["JETTOOLS_NEW_PROFILE"] = {
-    text = "Enter new profile name:",
-    button1 = "Create",
-    button2 = "Cancel",
-    hasEditBox = true,
-    maxLetters = 64,
-    OnAccept = function(self)
-        local name = self.editBox:GetText()
-        if name and name ~= "" then
-            if JT:CreateProfile(name) then
-                JT:SetActiveProfile(name)
-                RefreshProfileDropdown()
-                if currentModuleName and activeScrollParent then
-                    PopulateModulePane(activeScrollParent, currentModuleName)
-                end
-            else
-                print("|cff00aaffJetTools|r: Profile '" .. name .. "' already exists.")
-            end
-        end
-    end,
-    EditBoxOnEnterPressed = function(self)
-        local parent = self:GetParent()
-        local name = parent.editBox:GetText()
-        if name and name ~= "" then
-            if JT:CreateProfile(name) then
-                JT:SetActiveProfile(name)
-                RefreshProfileDropdown()
-                if currentModuleName and activeScrollParent then
-                    PopulateModulePane(activeScrollParent, currentModuleName)
-                end
-            else
-                print("|cff00aaffJetTools|r: Profile '" .. name .. "' already exists.")
-            end
-        end
-        parent:Hide()
-    end,
-    timeout = 0,
-    whileDead = true,
-    hideOnEscape = true,
-    preferredIndex = 3,
-}
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Main options frame construction
@@ -332,17 +512,15 @@ local SIDEBAR_W   = 160
 local SIDEBAR_PAD = 8
 local BTN_H       = 28
 local RIGHT_PAD   = 12
-local PROFILE_H   = 44
 local DIVIDER_W   = 1
 
 local function CreateOptionsFrame()
-    -- Main panel: AF headered frame (draggable, close button, title)
+    -- Main panel
     local frame = AF.CreateHeaderedFrame(UIParent, "JetToolsOptionsFrame",
         "|cff00aaffJet|r|cffaa66ffTools|r", FRAME_W, FRAME_H, "DIALOG", 100)
     frame:SetPoint("CENTER")
     frame:Hide()
 
-    -- Escape closes it
     table.insert(UISpecialFrames, "JetToolsOptionsFrame")
 
     -- ── Left sidebar ─────────────────────────────────────────────────────────
@@ -359,22 +537,12 @@ local function CreateOptionsFrame()
 
     -- ── Right pane ───────────────────────────────────────────────────────────
 
-    local rightX  = SIDEBAR_W + SIDEBAR_PAD * 2 + DIVIDER_W + RIGHT_PAD
-    local rightW  = FRAME_W - rightX - RIGHT_PAD
-    local rightH  = FRAME_H - 40 - PROFILE_H - 8
+    local rightX = SIDEBAR_W + SIDEBAR_PAD * 2 + DIVIDER_W + RIGHT_PAD
+    local rightW = FRAME_W - rightX - RIGHT_PAD
+    local rightH = FRAME_H - 40 - 8
 
-    -- Profile strip container (above scroll frame)
-    local profileStrip = CreateFrame("Frame", nil, frame)
-    profileStrip:SetSize(rightW, PROFILE_H)
-    profileStrip:SetPoint("TOPLEFT", frame, "TOPLEFT", rightX, -36)
-
-    -- Scroll frame for module settings
     local scrollParent = AF.CreateScrollFrame(frame, nil, rightW, rightH)
-    AF.SetPoint(scrollParent, "TOPLEFT", profileStrip, "BOTTOMLEFT", 0, -4)
-    activeScrollParent = scrollParent
-
-    -- Build profile strip (needs scrollParent ref for live refresh)
-    BuildProfileStrip(profileStrip, scrollParent)
+    AF.SetPoint(scrollParent, "TOPLEFT", frame, "TOPLEFT", rightX, -36)
 
     -- ── Sidebar module buttons ────────────────────────────────────────────────
 
@@ -384,17 +552,15 @@ local function CreateOptionsFrame()
         local label = MODULE_LABELS[moduleName] or moduleName
         local btn = AF.CreateButton(sidebar, label, "widget",
             SIDEBAR_W - SIDEBAR_PAD * 2, BTN_H)
-        btn.id = i  -- set id so ButtonGroup Highlight(i) works
-        btn._moduleName = moduleName  -- store for onClick lookup
+        btn.id = i
+        btn._moduleName = moduleName
         AF.SetPoint(btn, "TOPLEFT", sidebar, "TOPLEFT",
             SIDEBAR_PAD, -(SIDEBAR_PAD + (i - 1) * (BTN_H + 4)))
 
         sidebarButtons[i] = btn
     end
 
-    -- ButtonGroup: radio-style highlight.
-    -- onClick is the 4th arg and fires AFTER the selection visual is applied.
-    -- It receives (button, buttonId) — we use button._moduleName to populate.
+    -- ButtonGroup: onClick is the 4th arg, fires AFTER selection visual
     local Highlight = AF.CreateButtonGroup(
         sidebarButtons,
         function(btn) btn:SetColor("accent") end,   -- onSelect
@@ -425,7 +591,6 @@ function JT:ToggleOptions()
     if optionsFrame:IsShown() then
         optionsFrame:Hide()
     else
-        RefreshProfileDropdown()
         optionsFrame:Show()
     end
 end
@@ -434,7 +599,6 @@ function JT:ShowOptions()
     if not optionsFrame then
         optionsFrame = CreateOptionsFrame()
     end
-    RefreshProfileDropdown()
     optionsFrame:Show()
 end
 
