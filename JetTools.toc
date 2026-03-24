@@ -2,8 +2,8 @@
 ## Title: JetTools
 ## Notes: Personal addon suite replacing WeakAuras
 ## Author: Jetskis
-## Version: 1.0.0
-## SavedVariablesPerCharacter: JetToolsDB
+## Version: 1.4.5
+## SavedVariables: JetToolsDB
 ## RequiredDeps: AbstractFramework
 ## OptionalDeps: LibSharedMedia-3.0
 ## X-Curse-Project-ID: 1432663
