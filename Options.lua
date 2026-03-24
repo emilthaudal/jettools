@@ -1,12 +1,14 @@
 -- JetTools Options Panel
--- Simple draggable frame for configuring modules
--- Refactored to be data-driven
+-- AF-based: left sidebar (module nav) + right scroll pane + profile management
 
 local addonName, JT = ...
 
+---@type AbstractFramework
+local AF = _G.AbstractFramework
+
 local optionsFrame = nil
 
--- Defined order for modules in the options panel
+-- Defined display order for modules in the sidebar
 local MODULE_ORDER = {
     "RangeIndicator",
     "CurrentExpansionFilter",
@@ -21,361 +23,80 @@ local MODULE_ORDER = {
     "StealthReminder",
 }
 
--- Create the options frame
-local function CreateOptionsFrame()
-    local frame = CreateFrame("Frame", "JetToolsOptionsFrame", UIParent, "BackdropTemplate")
-    frame:SetSize(950, 720) -- Wider for 3 columns
-    frame:SetPoint("CENTER")
-    frame:SetBackdrop({
-        bgFile = "Interface/Tooltips/UI-Tooltip-Background",
-        edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
-        tile = true,
-        tileSize = 16,
-        edgeSize = 16,
-        insets = { left = 4, right = 4, top = 4, bottom = 4 }
-    })
-    frame:SetBackdropColor(0.1, 0.1, 0.1, 0.9)
-    frame:SetBackdropBorderColor(0.3, 0.4, 0.6)
-    frame:EnableMouse(true)
-    frame:SetMovable(true)
-    frame:RegisterForDrag("LeftButton")
-    frame:SetScript("OnDragStart", frame.StartMoving)
-    frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
-    frame:SetFrameStrata("DIALOG")
-    frame:SetClampedToScreen(true)
-    frame:Hide()
-    
-    -- Make closeable with Escape
-    table.insert(UISpecialFrames, "JetToolsOptionsFrame")
-    
-    -- Title
-    local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    title:SetPoint("TOP", 0, -10)
-    title:SetText("|cff00aaffJet|r|cffaa66ffTools|r Options")
-    
-    -- Close button
-    local closeBtn = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
-    closeBtn:SetPoint("TOPRIGHT", -2, -2)
-    
-    -- Content area
-    local content = CreateFrame("Frame", nil, frame)
-    content:SetPoint("TOPLEFT", 15, -40)
-    content:SetPoint("BOTTOMRIGHT", -15, 15)
-    frame.content = content
-    
-    return frame
+-- Human-friendly display names for sidebar buttons
+local MODULE_LABELS = {
+    RangeIndicator        = "Range Indicator",
+    CurrentExpansionFilter = "Expansion Filter",
+    AutoRoleQueue         = "Auto Role Queue",
+    CharacterSheet        = "Character Sheet",
+    GearUpgradeRanks      = "Gear Ranks",
+    CDMAuraRemover        = "Aura Remover",
+    CharacterStatFormatting = "Stat Formatting",
+    SlashCommands         = "Slash Commands",
+    CombatStatus          = "Combat Status",
+    PetReminders          = "Pet Reminders",
+    StealthReminder       = "Stealth Reminder",
+}
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Helpers
+-- ─────────────────────────────────────────────────────────────────────────────
+
+-- Destroy all children of a frame (clear the right pane before re-populating)
+local function ClearFrame(parent)
+    local children = { parent:GetChildren() }
+    for _, child in ipairs(children) do
+        child:Hide()
+        child:SetParent(nil)
+    end
+    local regions = { parent:GetRegions() }
+    for _, region in ipairs(regions) do
+        region:Hide()
+    end
 end
 
--- Create a checkbox
-local function CreateCheckbox(parent, label, x, y, checked, onChange)
-    local cb = CreateFrame("CheckButton", nil, parent, "UICheckButtonTemplate")
-    cb:SetPoint("TOPLEFT", x, y)
-    cb:SetChecked(checked)
-    cb:SetScript("OnClick", function(self)
-        onChange(self:GetChecked())
-    end)
-    
-    local text = cb:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    text:SetPoint("LEFT", cb, "RIGHT", 2, 0)
-    text:SetText(label)
-    
-    cb.label = text
-    return cb
-end
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Option control builder (AF widgets)
+-- ─────────────────────────────────────────────────────────────────────────────
 
--- Create a slider
-local function CreateSlider(parent, label, x, y, min, max, step, value, onChange)
-    local sliderFrame = CreateFrame("Frame", nil, parent)
-    sliderFrame:SetSize(200, 40)
-    sliderFrame:SetPoint("TOPLEFT", x, y)
-    
-    local text = sliderFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    text:SetPoint("TOPLEFT", 0, 0)
-    text:SetText(label)
-    
-    local slider = CreateFrame("Slider", nil, sliderFrame, "OptionsSliderTemplate")
-    slider:SetPoint("TOPLEFT", 0, -15)
-    slider:SetSize(180, 17)
-    slider:SetMinMaxValues(min, max)
-    slider:SetValueStep(step)
-    slider:SetObeyStepOnDrag(true)
-    slider:SetValue(value)
-    
-    slider.Low:SetText(min)
-    slider.High:SetText(max)
-    slider.Text:SetText(value)
-    
-    slider:SetScript("OnValueChanged", function(self, val)
-        val = math.floor(val + 0.5)
-        self.Text:SetText(val)
-        onChange(val)
-    end)
-    
-    sliderFrame.slider = slider
-    return sliderFrame
-end
+-- Returns the new yOffset after placing the control
+local function BuildOptionControl(parent, moduleName, schema, yOffset)
+    local CONTENT_WIDTH = 340
+    local INDENT        = 16
 
--- Create a horizontal separator line
-local function CreateSeparator(parent, xOffset, yOffset, width)
-    local separator = parent:CreateTexture(nil, "ARTWORK")
-    separator:SetPoint("TOPLEFT", xOffset, yOffset - 5)
-    separator:SetSize(width or 270, 1)
-    separator:SetColorTexture(0.3, 0.4, 0.6, 0.8)
-    return yOffset - 15
-end
+    local schemaType = schema.type
+    local key        = schema.key
 
--- Create a text input field
-local function CreateTextInput(parent, label, x, y, width, value, onChange)
-    local inputFrame = CreateFrame("Frame", nil, parent)
-    inputFrame:SetSize(width, 40)
-    inputFrame:SetPoint("TOPLEFT", x, y)
-    
-    -- Label
-    local text = inputFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    text:SetPoint("TOPLEFT", 0, 0)
-    text:SetText(label)
-    
-    -- EditBox with backdrop
-    local editBox = CreateFrame("EditBox", nil, inputFrame, "BackdropTemplate")
-    editBox:SetPoint("TOPLEFT", 0, -15)
-    editBox:SetSize(width, 22)
-    editBox:SetBackdrop({
-        bgFile = "Interface/Tooltips/UI-Tooltip-Background",
-        edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
-        tile = true,
-        tileSize = 16,
-        edgeSize = 12,
-        insets = { left = 2, right = 2, top = 2, bottom = 2 }
-    })
-    editBox:SetBackdropColor(0.1, 0.1, 0.1, 0.9)
-    editBox:SetBackdropBorderColor(0.3, 0.4, 0.6)
-    editBox:SetFontObject("GameFontHighlightSmall")
-    editBox:SetAutoFocus(false)
-    editBox:SetText(value or "")
-    editBox:SetTextInsets(8, 8, 0, 0)
-    
-    editBox:SetScript("OnEnterPressed", function(self)
-        self:ClearFocus()
-        onChange(self:GetText())
-    end)
-    
-    editBox:SetScript("OnEscapePressed", function(self)
-        self:ClearFocus()
-    end)
-    
-    inputFrame.editBox = editBox
-    return inputFrame
-end
-
--- Create a simple push button
-local function CreateButton(parent, label, x, y, width, onClick)
-    local btn = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
-    btn:SetPoint("TOPLEFT", x, y)
-    btn:SetSize(width, 24)
-    btn:SetText(label)
-    
-    btn:SetScript("OnClick", function(self)
-        if onClick then onClick(self) end
-    end)
-    
-    return btn
-end
-
--- Create a scrollable dropdown
-local function CreateDropdown(parent, label, x, y, width, options, selectedValue, onChange)
-    local dropdownFrame = CreateFrame("Frame", nil, parent)
-    dropdownFrame:SetSize(width, 45)
-    dropdownFrame:SetPoint("TOPLEFT", x, y)
-    
-    -- Label
-    local text = dropdownFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    text:SetPoint("TOPLEFT", 0, 0)
-    text:SetText(label)
-    
-    -- Button (shows current selection)
-    local button = CreateFrame("Button", nil, dropdownFrame, "BackdropTemplate")
-    button:SetPoint("TOPLEFT", 0, -15)
-    button:SetSize(width, 22)
-    button:SetBackdrop({
-        bgFile = "Interface/Tooltips/UI-Tooltip-Background",
-        edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
-        tile = true,
-        tileSize = 16,
-        edgeSize = 12,
-        insets = { left = 2, right = 2, top = 2, bottom = 2 }
-    })
-    button:SetBackdropColor(0.1, 0.1, 0.1, 0.9)
-    button:SetBackdropBorderColor(0.3, 0.4, 0.6)
-    
-    local buttonText = button:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    buttonText:SetPoint("LEFT", 8, 0)
-    buttonText:SetPoint("RIGHT", -20, 0)
-    buttonText:SetJustifyH("LEFT")
-    buttonText:SetText(selectedValue or "Select...")
-    button.text = buttonText
-    
-    local arrow = button:CreateTexture(nil, "OVERLAY")
-    arrow:SetPoint("RIGHT", -5, 0)
-    arrow:SetSize(12, 12)
-    arrow:SetTexture("Interface\\ChatFrame\\ChatFrameExpandArrow")
-    
-    -- Dropdown list frame
-    local listFrame = CreateFrame("Frame", nil, button, "BackdropTemplate")
-    listFrame:SetPoint("TOPLEFT", button, "BOTTOMLEFT", 0, -2)
-    listFrame:SetSize(width, 150)
-    listFrame:SetBackdrop({
-        bgFile = "Interface/Tooltips/UI-Tooltip-Background",
-        edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
-        tile = true,
-        tileSize = 16,
-        edgeSize = 12,
-        insets = { left = 2, right = 2, top = 2, bottom = 2 }
-    })
-    listFrame:SetBackdropColor(0.1, 0.1, 0.1, 0.95)
-    listFrame:SetBackdropBorderColor(0.3, 0.4, 0.6)
-    listFrame:SetFrameStrata("TOOLTIP")
-    listFrame:Hide()
-    
-    -- Scroll frame
-    local scrollFrame = CreateFrame("ScrollFrame", nil, listFrame, "UIPanelScrollFrameTemplate")
-    scrollFrame:SetPoint("TOPLEFT", 5, -5)
-    scrollFrame:SetPoint("BOTTOMRIGHT", -26, 5)
-    
-    local scrollChild = CreateFrame("Frame", nil, scrollFrame)
-    scrollChild:SetSize(width - 30, 1)
-    scrollFrame:SetScrollChild(scrollChild)
-    
-    -- Populate options
-    local function RefreshOptions()
-        -- Clear existing buttons
-        for _, child in ipairs({scrollChild:GetChildren()}) do
-            child:Hide()
-            child:SetParent(nil)
+    -- Resolve current value
+    local currentValue = schema.default
+    if key then
+        local settings = JT:GetModuleSettings(moduleName)
+        if settings and settings[key] ~= nil then
+            currentValue = settings[key]
         end
-        
-        local itemHeight = 18
-        local yPos = 0
-        
-        -- Sort options alphabetically
-        local sortedOptions = {}
-        for name, _ in pairs(options) do
-            table.insert(sortedOptions, name)
-        end
-        table.sort(sortedOptions)
-        
-        for _, name in ipairs(sortedOptions) do
-            local itemBtn = CreateFrame("Button", nil, scrollChild)
-            itemBtn:SetSize(width - 35, itemHeight)
-            itemBtn:SetPoint("TOPLEFT", 0, -yPos)
-            
-            local itemText = itemBtn:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-            itemText:SetPoint("LEFT", 5, 0)
-            itemText:SetPoint("RIGHT", -5, 0)
-            itemText:SetJustifyH("LEFT")
-            itemText:SetText(name)
-            
-            local highlight = itemBtn:CreateTexture(nil, "HIGHLIGHT")
-            highlight:SetAllPoints()
-            highlight:SetColorTexture(1, 1, 1, 0.2)
-            
-            itemBtn:SetScript("OnClick", function()
-                buttonText:SetText(name)
-                listFrame:Hide()
-                onChange(name)
-            end)
-            
-            yPos = yPos + itemHeight
-        end
-        
-        scrollChild:SetHeight(math.max(yPos, 1))
-    end
-    
-    RefreshOptions()
-    
-    -- Toggle dropdown on button click
-    button:SetScript("OnClick", function()
-        if listFrame:IsShown() then
-            listFrame:Hide()
-        else
-            RefreshOptions()
-            listFrame:Show()
-        end
-    end)
-    
-    -- Close dropdown when clicking elsewhere
-    listFrame:SetScript("OnShow", function()
-        listFrame:SetScript("OnUpdate", function()
-            if not button:IsMouseOver() and not listFrame:IsMouseOver() then
-                if IsMouseButtonDown("LeftButton") then
-                    listFrame:Hide()
-                end
-            end
-        end)
-    end)
-    
-    listFrame:SetScript("OnHide", function()
-        listFrame:SetScript("OnUpdate", nil)
-    end)
-    
-    dropdownFrame.button = button
-    dropdownFrame.Refresh = function(newOptions)
-        options = newOptions
-        RefreshOptions()
-    end
-    dropdownFrame.SetValue = function(self, value)
-        buttonText:SetText(value or "Select...")
-    end
-    
-    return dropdownFrame
-end
-
-
--- Build a single option control based on schema
-local function BuildOptionControl(parent, moduleName, schema, xOffset, yOffset)
-    local settings = JT:GetModuleSettings(moduleName)
-    if not settings then 
-        -- Fallback for safety, though settings should exist if module is registered
-        settings = {}
     end
 
-    local type = schema.type
-    local key = schema.key
-    local default = schema.default
-    
-    -- Get current value safely
-    local currentValue = default
-    if key and settings[key] ~= nil then
-        currentValue = settings[key]
-    end
+    if schemaType == "header" then
+        -- AF titled pane (underline title) used as a section header
+        local pane = AF.CreateTitledPane(parent, schema.label, CONTENT_WIDTH, 20)
+        AF.SetPoint(pane, "TOPLEFT", parent, "TOPLEFT", 0, yOffset)
+        return yOffset - 30
 
-    if type == "header" then
-        local header = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-        header:SetPoint("TOPLEFT", xOffset, yOffset)
-        header:SetText(schema.label)
-        header:SetTextColor(0.67, 0.4, 1) -- Purple-ish theme
-        return yOffset - 25
-        
-    elseif type == "subheader" then
-        local header = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-        header:SetPoint("TOPLEFT", xOffset + 10, yOffset)
-        header:SetText(schema.label)
-        header:SetTextColor(0.8, 0.8, 0.8)
-        return yOffset - 20
-        
-    elseif type == "description" then
-        local desc = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-        desc:SetPoint("TOPLEFT", xOffset, yOffset)
-        desc:SetText(schema.text)
-        desc:SetTextColor(0.7, 0.7, 0.7)
-        desc:SetWidth(280) -- Constrain width for columns
-        desc:SetJustifyH("LEFT")
-        
-        -- Calculate actual height of wrapped text and add padding
-        local textHeight = desc:GetStringHeight()
-        return yOffset - textHeight - 10  -- Dynamic height + 10px padding
-        
-    elseif type == "checkbox" then
-        -- Handle special "enabled" key separately to use JT:SetModuleEnabled
+    elseif schemaType == "subheader" then
+        local fs = AF.CreateFontString(parent, schema.label, "silver", "accent")
+        AF.SetPoint(fs, "TOPLEFT", parent, "TOPLEFT", INDENT, yOffset)
+        return yOffset - 22
+
+    elseif schemaType == "description" then
+        local fs = AF.CreateFontString(parent, schema.text, "disabled", "normal")
+        AF.SetPoint(fs, "TOPLEFT", parent, "TOPLEFT", INDENT, yOffset)
+        fs:SetWidth(CONTENT_WIDTH - INDENT)
+        fs:SetJustifyH("LEFT")
+        -- GetStringHeight is only valid after layout; use a minimum of 18px
+        local h = math.max(fs:GetStringHeight(), 18)
+        return yOffset - h - 8
+
+    elseif schemaType == "checkbox" then
         local onChange
         if key == "enabled" then
             onChange = function(checked)
@@ -386,154 +107,323 @@ local function BuildOptionControl(parent, moduleName, schema, xOffset, yOffset)
                 JT:SetModuleSetting(moduleName, key, checked)
             end
         end
-        
-        -- Indent if it's not a main toggle or if it follows a subheader
-        local indent = (key == "enabled") and 0 or 20
-        
-        CreateCheckbox(parent, schema.label, xOffset + indent, yOffset, currentValue, onChange)
-        return yOffset - 30
-        
-    elseif type == "slider" then
-        CreateSlider(parent, schema.label, xOffset, yOffset, schema.min, schema.max, schema.step, currentValue, function(val)
+
+        local indent = (key == "enabled") and 0 or INDENT
+        local cb = AF.CreateCheckButton(parent, schema.label, function(checked)
+            onChange(checked)
+        end)
+        AF.SetPoint(cb, "TOPLEFT", parent, "TOPLEFT", indent, yOffset)
+        cb:SetChecked(currentValue)
+        return yOffset - 28
+
+    elseif schemaType == "slider" then
+        local slider = AF.CreateSlider(parent, schema.label, CONTENT_WIDTH - INDENT, schema.min, schema.max, schema.step)
+        AF.SetPoint(slider, "TOPLEFT", parent, "TOPLEFT", INDENT, yOffset)
+        slider:SetValue(currentValue)
+        slider:SetOnValueChanged(function(val)
             JT:SetModuleSetting(moduleName, key, val)
         end)
-        return yOffset - 50 -- Sliders are taller
-        
-    elseif type == "input" then
-        CreateTextInput(parent, schema.label, xOffset, yOffset, schema.width or 150, currentValue, function(val)
-            JT:SetModuleSetting(moduleName, key, val)
+        return yOffset - 52
+
+    elseif schemaType == "input" then
+        local editBox = AF.CreateEditBox(parent, schema.label, schema.width or CONTENT_WIDTH - INDENT, 32, "normal")
+        AF.SetPoint(editBox, "TOPLEFT", parent, "TOPLEFT", INDENT, yOffset)
+        editBox:SetText(currentValue or "")
+        editBox:SetOnTextChanged(function(text)
+            JT:SetModuleSetting(moduleName, key, text)
         end)
-        return yOffset - 40
-        
-    elseif type == "dropdown" then
-        CreateDropdown(parent, schema.label, xOffset, yOffset, schema.width or 200, schema.options, currentValue, function(val)
-            JT:SetModuleSetting(moduleName, key, val)
-        end)
-        return yOffset - 55
-        
-    elseif type == "button" then
-        CreateButton(parent, schema.label, xOffset, yOffset, schema.width or 120, schema.func)
-        return yOffset - 40
-        
-    elseif type == "color" then
-        local btn = CreateButton(parent, schema.label, xOffset, yOffset, 150, function()
-            local info = UIDropDownMenu_CreateInfo()
-            info.r = currentValue.r
-            info.g = currentValue.g
-            info.b = currentValue.b
-            info.opacity = currentValue.a
-            info.hasOpacity = true
-            
-            info.swatchFunc = function()
-                local r, g, b = ColorPickerFrame:GetColorRGB()
-                local a = OpacitySliderFrame:GetValue()
-                JT:SetModuleSetting(moduleName, key, {r=r, g=g, b=b, a=a})
-            end
-            
-            info.opacityFunc = function()
-                local r, g, b = ColorPickerFrame:GetColorRGB()
-                local a = OpacitySliderFrame:GetValue()
-                JT:SetModuleSetting(moduleName, key, {r=r, g=g, b=b, a=a})
-            end
-            
-            info.cancelFunc = function(restore)
-                if restore then
-                    JT:SetModuleSetting(moduleName, key, {r=restore.r, g=restore.g, b=restore.b, a=restore.opacity})
+        return yOffset - 50
+
+    elseif schemaType == "dropdown" then
+        -- Build items list: schema.options is either array or {value=label} table
+        local items = {}
+        if type(schema.options) == "table" then
+            if schema.options[1] then
+                -- indexed array of strings
+                for _, v in ipairs(schema.options) do
+                    table.insert(items, { text = v, value = v })
+                end
+            else
+                -- key=value pairs
+                for v, label in pairs(schema.options) do
+                    table.insert(items, { text = label, value = v })
                 end
             end
-            
-            ColorPickerFrame:SetupColorPickerAndShow(info)
+        end
+
+        local dd = AF.CreateDropdown(parent, schema.width or CONTENT_WIDTH - INDENT, 8, "DOWN")
+        AF.SetPoint(dd, "TOPLEFT", parent, "TOPLEFT", INDENT, yOffset)
+        dd:SetLabel(schema.label)
+        dd:SetItems(items)
+        dd:SetOnSelect(function(item)
+            JT:SetModuleSetting(moduleName, key, item.value)
         end)
-        
-        -- Preview swatch
-        local swatch = btn:CreateTexture(nil, "OVERLAY")
-        swatch:SetSize(20, 20)
-        swatch:SetPoint("RIGHT", -5, 0)
-        swatch:SetColorTexture(currentValue.r, currentValue.g, currentValue.b, currentValue.a or 1)
-        
-        return yOffset - 40
+        -- Set current selection
+        for _, item in ipairs(items) do
+            if item.value == currentValue then
+                dd:SetSelectedItem(item)
+                break
+            end
+        end
+        return yOffset - 55
+
+    elseif schemaType == "button" then
+        local btn = AF.CreateButton(parent, schema.label, "accent", schema.width or 120, 24)
+        AF.SetPoint(btn, "TOPLEFT", parent, "TOPLEFT", INDENT, yOffset)
+        btn:SetOnClick(schema.func)
+        return yOffset - 36
+
+    elseif schemaType == "color" then
+        local cp = AF.CreateColorPicker(parent, schema.label, true,
+            function(r, g, b, a)
+                JT:SetModuleSetting(moduleName, key, { r = r, g = g, b = b, a = a })
+            end,
+            function(r, g, b, a)
+                JT:SetModuleSetting(moduleName, key, { r = r, g = g, b = b, a = a })
+            end
+        )
+        AF.SetPoint(cp, "TOPLEFT", parent, "TOPLEFT", INDENT, yOffset)
+        if currentValue then
+            cp:SetColor(currentValue.r, currentValue.g, currentValue.b, currentValue.a or 1)
+        end
+        return yOffset - 36
     end
-    
+
     return yOffset
 end
 
--- Populate the options frame with module controls
-local function PopulateOptions()
-    if not optionsFrame then return end
-    
-    local content = optionsFrame.content
-    
-    -- Clear existing children if repopulating
-    -- Note: This simplistic "create new" approach works for static options. 
-    -- If we refreshed often we'd leak memory without proper cleanup/pool.
-    -- Assuming one-time populate for now.
-    
-    -- Three-column layout
-    local columnY = {0, 0, 0}  -- Track Y position for each column
-    local COL_WIDTH = 280
-    local COL_GAP = 40
-    local columnOffsets = {
-        0,                          -- Column 1 (left)
-        COL_WIDTH + COL_GAP,        -- Column 2 (center) = 320
-        (COL_WIDTH + COL_GAP) * 2   -- Column 3 (right) = 640
-    }
-    
-    -- Iterate through modules in defined order
-    -- Using a "masonry" fill: add to whichever column is shortest
-    for _, moduleName in ipairs(MODULE_ORDER) do
-        local module = JT.modules[moduleName]
-        if module and module.GetOptions then
-            local optionsSchema = module:GetOptions()
-            
-            -- Find the shortest column (closest to 0, since Y goes negative)
-            local shortestCol = 1
-            for i = 2, 3 do
-                if columnY[i] > columnY[shortestCol] then
-                    shortestCol = i
-                end
-            end
-            
-            local currentY = columnY[shortestCol]
-            local currentX = columnOffsets[shortestCol]
-            
-            -- Build UI for this module
-            for _, item in ipairs(optionsSchema) do
-                currentY = BuildOptionControl(content, moduleName, item, currentX, currentY)
-            end
-            
-            -- Add separator after each module
-            currentY = CreateSeparator(content, currentX, currentY, COL_WIDTH)
-            
-            -- Update column cursor
-            columnY[shortestCol] = currentY - 15  -- Extra padding between modules
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Module pane population
+-- ─────────────────────────────────────────────────────────────────────────────
+
+local currentModuleName = nil
+
+local function PopulateModulePane(scrollContent, moduleName)
+    ClearFrame(scrollContent)
+    currentModuleName = moduleName
+
+    local module = JT.modules[moduleName]
+    if not module or not module.GetOptions then return end
+
+    local schema = module:GetOptions()
+    local yOffset = -8
+
+    for _, item in ipairs(schema) do
+        yOffset = BuildOptionControl(scrollContent, moduleName, item, yOffset)
+    end
+
+    -- Ensure scroll content is tall enough
+    local totalHeight = math.abs(yOffset) + 16
+    scrollContent:SetHeight(math.max(totalHeight, 1))
+end
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Profile management UI (top strip of the right pane)
+-- ─────────────────────────────────────────────────────────────────────────────
+
+local profileDropdown = nil
+
+local function RefreshProfileDropdown()
+    if not profileDropdown then return end
+
+    local names = JT:GetProfileNames()
+    local items = {}
+    for _, name in ipairs(names) do
+        table.insert(items, { text = name, value = name })
+    end
+    profileDropdown:SetItems(items)
+
+    -- Highlight the active profile
+    local activeName = JT:GetActiveProfileName()
+    for _, item in ipairs(items) do
+        if item.value == activeName then
+            profileDropdown:SetSelectedItem(item)
+            break
         end
     end
 end
 
--- Toggle options visibility
+local function BuildProfileStrip(parent, scrollContent)
+    -- Label
+    local label = AF.CreateFontString(parent, "Profile:", "white", "accent")
+    AF.SetPoint(label, "TOPLEFT", parent, "TOPLEFT", 0, -8)
+
+    -- Dropdown (200px wide, max 8 items)
+    local dd = AF.CreateDropdown(parent, 200, 8, "DOWN")
+    AF.SetPoint(dd, "TOPLEFT", label, "TOPRIGHT", 8, 0)
+    dd:SetOnSelect(function(item)
+        JT:SetActiveProfile(item.value)
+        -- Re-populate current module pane to reflect new profile values
+        if currentModuleName then
+            PopulateModulePane(scrollContent, currentModuleName)
+        end
+    end)
+    profileDropdown = dd
+
+    -- New Profile button
+    local newBtn = AF.CreateButton(parent, "New", "accent", 60, 22)
+    AF.SetPoint(newBtn, "TOPLEFT", dd, "TOPRIGHT", 6, 0)
+    newBtn:SetOnClick(function()
+        AF.ShowGlobalDialog("New Profile", "Enter profile name:", function(name)
+            if name and name ~= "" then
+                if JT:CreateProfile(name) then
+                    JT:SetActiveProfile(name)
+                    RefreshProfileDropdown()
+                    if currentModuleName then
+                        PopulateModulePane(scrollContent, currentModuleName)
+                    end
+                else
+                    print("|cff00aaffJetTools|r: Profile '" .. name .. "' already exists.")
+                end
+            end
+        end)
+    end)
+
+    -- Delete Profile button
+    local delBtn = AF.CreateButton(parent, "Delete", "red", 60, 22)
+    AF.SetPoint(delBtn, "TOPLEFT", newBtn, "TOPRIGHT", 4, 0)
+    delBtn:SetOnClick(function()
+        local activeName = JT:GetActiveProfileName()
+        if activeName == "Default" then
+            print("|cff00aaffJetTools|r: Cannot delete the Default profile.")
+            return
+        end
+        if JT:DeleteProfile(activeName) then
+            JT:SetActiveProfile("Default")
+            RefreshProfileDropdown()
+            if currentModuleName then
+                PopulateModulePane(scrollContent, currentModuleName)
+            end
+        end
+    end)
+
+    RefreshProfileDropdown()
+    return 40 -- height consumed by the profile strip
+end
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Main options frame construction
+-- ─────────────────────────────────────────────────────────────────────────────
+
+-- Dimensions
+local FRAME_W       = 820
+local FRAME_H       = 600
+local SIDEBAR_W     = 160
+local SIDEBAR_PAD   = 8
+local BTN_H         = 28
+local RIGHT_PAD     = 12
+local PROFILE_H     = 44  -- height of the profile strip area
+local DIVIDER_W     = 1
+
+local function CreateOptionsFrame()
+    -- Main panel (AF headered frame: draggable, close button, title)
+    local frame = AF.CreateHeaderedFrame(UIParent, "JetToolsOptionsFrame", "|cff00aaffJet|r|cffaa66ffTools|r", FRAME_W, FRAME_H, "DIALOG", 100)
+    frame:SetPoint("CENTER")
+    frame:SetClampedToScreen(true)
+    frame:Hide()
+
+    -- Make Escape close it
+    table.insert(UISpecialFrames, "JetToolsOptionsFrame")
+
+    -- ── Left sidebar ─────────────────────────────────────────────────────────
+
+    local sidebar = AF.CreateBorderedFrame(frame, nil, SIDEBAR_W, FRAME_H - 40, nil, "accent")
+    AF.SetPoint(sidebar, "TOPLEFT", frame, "TOPLEFT", SIDEBAR_PAD, -36)
+
+    -- ── Vertical divider ─────────────────────────────────────────────────────
+
+    local divider = frame:CreateTexture(nil, "ARTWORK")
+    divider:SetSize(DIVIDER_W, FRAME_H - 40)
+    divider:SetPoint("TOPLEFT", sidebar, "TOPRIGHT", SIDEBAR_PAD, 0)
+    divider:SetColorTexture(0.3, 0.4, 0.6, 0.5)
+
+    -- ── Right pane ───────────────────────────────────────────────────────────
+
+    local rightX     = SIDEBAR_W + SIDEBAR_PAD * 2 + DIVIDER_W + RIGHT_PAD
+    local rightW     = FRAME_W - rightX - RIGHT_PAD
+    local rightH     = FRAME_H - 40 - PROFILE_H - 8
+
+    -- Profile strip container (above the scroll frame)
+    local profileStrip = CreateFrame("Frame", nil, frame)
+    profileStrip:SetSize(rightW, PROFILE_H)
+    profileStrip:SetPoint("TOPLEFT", frame, "TOPLEFT", rightX, -36)
+
+    -- Scroll frame for module settings
+    local scrollFrame = AF.CreateScrollFrame(frame, nil, rightW, rightH, nil, nil)
+    AF.SetPoint(scrollFrame, "TOPLEFT", profileStrip, "BOTTOMLEFT", 0, -4)
+
+    -- The scrollable content frame (where widgets are placed)
+    local scrollContent = scrollFrame.scrollContent
+    scrollContent:SetWidth(rightW - 20) -- leave room for scrollbar
+
+    -- Build profile strip (needs scrollContent ref for live refresh)
+    BuildProfileStrip(profileStrip, scrollContent)
+
+    -- ── Sidebar module buttons ────────────────────────────────────────────────
+
+    local sidebarButtons = {}
+    local buttonGroupHighlight
+
+    for i, moduleName in ipairs(MODULE_ORDER) do
+        local label = MODULE_LABELS[moduleName] or moduleName
+        local btn = AF.CreateButton(sidebar, label, "normal", SIDEBAR_W - SIDEBAR_PAD * 2, BTN_H)
+        AF.SetPoint(btn, "TOPLEFT", sidebar, "TOPLEFT", SIDEBAR_PAD, -(SIDEBAR_PAD + (i - 1) * (BTN_H + 4)))
+
+        -- Capture moduleName in a closure
+        local capturedName = moduleName
+        btn:SetOnClick(function()
+            if buttonGroupHighlight then
+                buttonGroupHighlight(i)
+            end
+            PopulateModulePane(scrollContent, capturedName)
+        end)
+
+        sidebarButtons[i] = btn
+    end
+
+    -- Wire up ButtonGroup for radio-style highlight
+    buttonGroupHighlight = AF.CreateButtonGroup(sidebarButtons,
+        function(btn) btn:SetColor("accent") end,   -- onSelect
+        function(btn) btn:SetColor("normal") end,   -- onDeselect
+        nil                                          -- onClick handled above
+    )
+
+    -- Select first module by default
+    if #sidebarButtons > 0 then
+        buttonGroupHighlight(1)
+        PopulateModulePane(scrollContent, MODULE_ORDER[1])
+    end
+
+    frame.RefreshProfileDropdown = RefreshProfileDropdown
+
+    return frame
+end
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Public API
+-- ─────────────────────────────────────────────────────────────────────────────
+
 function JT:ToggleOptions()
     if not optionsFrame then
         optionsFrame = CreateOptionsFrame()
-        PopulateOptions()
     end
-    
+
     if optionsFrame:IsShown() then
         optionsFrame:Hide()
     else
+        RefreshProfileDropdown()
         optionsFrame:Show()
     end
 end
 
--- Show options
 function JT:ShowOptions()
     if not optionsFrame then
         optionsFrame = CreateOptionsFrame()
-        PopulateOptions()
     end
+    RefreshProfileDropdown()
     optionsFrame:Show()
 end
 
--- Hide options
 function JT:HideOptions()
     if optionsFrame then
         optionsFrame:Hide()
