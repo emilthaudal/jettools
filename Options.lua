@@ -379,30 +379,29 @@ local function CreateOptionsFrame()
     -- ── Sidebar module buttons ────────────────────────────────────────────────
 
     local sidebarButtons = {}
-    local Highlight  -- forward ref, assigned after CreateButtonGroup
 
     for i, moduleName in ipairs(MODULE_ORDER) do
         local label = MODULE_LABELS[moduleName] or moduleName
         local btn = AF.CreateButton(sidebar, label, "widget",
             SIDEBAR_W - SIDEBAR_PAD * 2, BTN_H)
         btn.id = i  -- set id so ButtonGroup Highlight(i) works
+        btn._moduleName = moduleName  -- store for onClick lookup
         AF.SetPoint(btn, "TOPLEFT", sidebar, "TOPLEFT",
             SIDEBAR_PAD, -(SIDEBAR_PAD + (i - 1) * (BTN_H + 4)))
-
-        local capturedName = moduleName
-        local capturedIndex = i
-        btn:SetOnClick(function()
-            if Highlight then Highlight(capturedIndex) end
-            PopulateModulePane(scrollParent, capturedName)
-        end)
 
         sidebarButtons[i] = btn
     end
 
-    -- ButtonGroup: radio-style highlight. Callbacks receive (button, buttonId).
-    Highlight = AF.CreateButtonGroup(sidebarButtons,
+    -- ButtonGroup: radio-style highlight.
+    -- onClick is the 4th arg and fires AFTER the selection visual is applied.
+    -- It receives (button, buttonId) — we use button._moduleName to populate.
+    local Highlight = AF.CreateButtonGroup(
+        sidebarButtons,
         function(btn) btn:SetColor("accent") end,   -- onSelect
-        function(btn) btn:SetColor("widget") end    -- onDeselect
+        function(btn) btn:SetColor("widget") end,   -- onDeselect
+        function(btn)                               -- onClick
+            PopulateModulePane(scrollParent, btn._moduleName)
+        end
     )
 
     -- Select first module by default
