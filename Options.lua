@@ -262,13 +262,13 @@ local function PopulateProfilePane(scrollParent)
         -- Rebuild pane to reflect new profile state
         PopulateProfilePane(scrollParent)
     end)
-    yOffset = yOffset - 55
+    yOffset = yOffset - 52
 
     -- ── Section: Spec Overrides ───────────────────────────────────────────────
 
     local numSpecs = GetNumSpecializations and GetNumSpecializations() or 0
     if numSpecs > 0 then
-        yOffset = yOffset - 8
+        yOffset = yOffset - 4
         local specHeader = AF.CreateTitledPane(scrollContent, "Spec-Specific Profiles", CONTENT_WIDTH, 20)
         AF.SetPoint(specHeader, "TOPLEFT", scrollContent, "TOPLEFT", 0, yOffset)
         yOffset = yOffset - 30
@@ -303,14 +303,14 @@ local function PopulateProfilePane(scrollParent)
                         JT:SetSpecProfile(specIndex, value)
                     end
                 end)
-                yOffset = yOffset - 55
+                yOffset = yOffset - 52
             end
         end
     end
 
     -- ── Section: New Profile ──────────────────────────────────────────────────
 
-    yOffset = yOffset - 8
+    yOffset = yOffset - 4
     local newHeader = AF.CreateTitledPane(scrollContent, "New Profile", CONTENT_WIDTH, 20)
     AF.SetPoint(newHeader, "TOPLEFT", scrollContent, "TOPLEFT", 0, yOffset)
     yOffset = yOffset - 30
@@ -320,7 +320,7 @@ local function PopulateProfilePane(scrollParent)
     AF.SetPoint(newDesc, "TOPLEFT", scrollContent, "TOPLEFT", INDENT, yOffset)
     newDesc:SetWidth(CONTENT_WIDTH - INDENT)
     newDesc:SetJustifyH("LEFT")
-    yOffset = yOffset - 22
+    yOffset = yOffset - 18
 
     local newEditBox = AF.CreateEditBox(scrollContent, "Profile Name",
         CONTENT_WIDTH - INDENT - 80 - 8, 28, "normal")
@@ -338,11 +338,11 @@ local function PopulateProfilePane(scrollParent)
             print("|cff00aaffJetTools|r: Profile '" .. name .. "' already exists.")
         end
     end)
-    yOffset = yOffset - 40
+    yOffset = yOffset - 36
 
     -- ── Section: Copy From ────────────────────────────────────────────────────
 
-    yOffset = yOffset - 8
+    yOffset = yOffset - 4
     local copyHeader = AF.CreateTitledPane(scrollContent, "Copy From", CONTENT_WIDTH, 20)
     AF.SetPoint(copyHeader, "TOPLEFT", scrollContent, "TOPLEFT", 0, yOffset)
     yOffset = yOffset - 30
@@ -352,7 +352,7 @@ local function PopulateProfilePane(scrollParent)
     AF.SetPoint(copyDesc, "TOPLEFT", scrollContent, "TOPLEFT", INDENT, yOffset)
     copyDesc:SetWidth(CONTENT_WIDTH - INDENT)
     copyDesc:SetJustifyH("LEFT")
-    yOffset = yOffset - 22
+    yOffset = yOffset - 18
 
     -- Populate only with profiles other than the active one
     local activeName = JT:GetActiveProfileName()
@@ -365,15 +365,13 @@ local function PopulateProfilePane(scrollParent)
 
     local copyDD = AF.CreateDropdown(scrollContent, CONTENT_WIDTH - INDENT - 80 - 8, 10)
     AF.SetPoint(copyDD, "TOPLEFT", scrollContent, "TOPLEFT", INDENT, yOffset)
-    copyDD:SetLabel("Copy from")
     copyDD:SetItems(copyItems)
     if copyItems[1] then
         copyDD:SetSelectedValue(copyItems[1].value)
     end
 
     local copyBtn = AF.CreateButton(scrollContent, "Copy", "accent", 80, 28)
-    AF.SetPoint(copyBtn, "TOPLEFT", scrollContent, "TOPLEFT",
-        INDENT + (CONTENT_WIDTH - INDENT - 80 - 8) + 8, yOffset - 14)
+    AF.SetPoint(copyBtn, "LEFT", copyDD, "RIGHT", 8, 0)
     copyBtn:SetOnClick(function()
         local getVal = copyDD.GetSelectedValue
         local selectedValue = getVal and copyDD:GetSelectedValue()
@@ -385,11 +383,11 @@ local function PopulateProfilePane(scrollParent)
             dialog.data = { sourceName = selectedValue }
         end
     end)
-    yOffset = yOffset - 55
+    yOffset = yOffset - 36
 
     -- ── Section: Reset Profile ────────────────────────────────────────────────
 
-    yOffset = yOffset - 8
+    yOffset = yOffset - 4
     local resetHeader = AF.CreateTitledPane(scrollContent, "Reset Profile", CONTENT_WIDTH, 20)
     AF.SetPoint(resetHeader, "TOPLEFT", scrollContent, "TOPLEFT", 0, yOffset)
     yOffset = yOffset - 30
@@ -399,18 +397,18 @@ local function PopulateProfilePane(scrollParent)
     AF.SetPoint(resetDesc, "TOPLEFT", scrollContent, "TOPLEFT", INDENT, yOffset)
     resetDesc:SetWidth(CONTENT_WIDTH - INDENT)
     resetDesc:SetJustifyH("LEFT")
-    yOffset = yOffset - 22
+    yOffset = yOffset - 18
 
     local resetBtn = AF.CreateButton(scrollContent, "Reset to Defaults", "red", 160, 28)
     AF.SetPoint(resetBtn, "TOPLEFT", scrollContent, "TOPLEFT", INDENT, yOffset)
     resetBtn:SetOnClick(function()
         StaticPopup_Show("JETTOOLS_RESET_PROFILE")
     end)
-    yOffset = yOffset - 40
+    yOffset = yOffset - 36
 
     -- ── Section: Delete Profile ───────────────────────────────────────────────
 
-    yOffset = yOffset - 8
+    yOffset = yOffset - 4
     local deleteHeader = AF.CreateTitledPane(scrollContent, "Delete Profile", CONTENT_WIDTH, 20)
     AF.SetPoint(deleteHeader, "TOPLEFT", scrollContent, "TOPLEFT", 0, yOffset)
     yOffset = yOffset - 30
@@ -421,7 +419,7 @@ local function PopulateProfilePane(scrollParent)
     AF.SetPoint(deleteDesc, "TOPLEFT", scrollContent, "TOPLEFT", INDENT, yOffset)
     deleteDesc:SetWidth(CONTENT_WIDTH - INDENT)
     deleteDesc:SetJustifyH("LEFT")
-    yOffset = yOffset - 32
+    yOffset = yOffset - 28
 
     -- Profiles eligible for deletion: not Default, not active
     local deleteItems = {}
@@ -433,15 +431,13 @@ local function PopulateProfilePane(scrollParent)
 
     local deleteDD = AF.CreateDropdown(scrollContent, CONTENT_WIDTH - INDENT - 80 - 8, 10)
     AF.SetPoint(deleteDD, "TOPLEFT", scrollContent, "TOPLEFT", INDENT, yOffset)
-    deleteDD:SetLabel("Delete profile")
     deleteDD:SetItems(deleteItems)
     if deleteItems[1] then
         deleteDD:SetSelectedValue(deleteItems[1].value)
     end
 
     local deleteBtn = AF.CreateButton(scrollContent, "Delete", "red", 80, 28)
-    AF.SetPoint(deleteBtn, "TOPLEFT", scrollContent, "TOPLEFT",
-        INDENT + (CONTENT_WIDTH - INDENT - 80 - 8) + 8, yOffset - 14)
+    AF.SetPoint(deleteBtn, "LEFT", deleteDD, "RIGHT", 8, 0)
     deleteBtn:SetOnClick(function()
         local getVal = deleteDD.GetSelectedValue
         local selectedValue = getVal and deleteDD:GetSelectedValue()
@@ -454,7 +450,7 @@ local function PopulateProfilePane(scrollParent)
             print("|cff00aaffJetTools|r: Cannot delete profile '" .. selectedValue .. "'.")
         end
     end)
-    yOffset = yOffset - 55
+    yOffset = yOffset - 36
 
     -- Update scroll frame content height
     local totalHeight = math.abs(yOffset) + 16
