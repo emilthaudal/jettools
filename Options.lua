@@ -245,7 +245,7 @@ local function PopulateProfilePane(scrollParent)
 
     local profileHeader = AF.CreateTitledPane(scrollContent, "Profile", CONTENT_WIDTH, 20)
     AF.SetPoint(profileHeader, "TOPLEFT", scrollContent, "TOPLEFT", LEFT_PAD, yOffset)
-    yOffset = yOffset - 30
+    yOffset = yOffset - 36
 
     -- Profile selector dropdown
     local profileItems = {}
@@ -272,7 +272,7 @@ local function PopulateProfilePane(scrollParent)
         yOffset = yOffset - 4
         local specHeader = AF.CreateTitledPane(scrollContent, "Spec-Specific Profiles", CONTENT_WIDTH, 20)
         AF.SetPoint(specHeader, "TOPLEFT", scrollContent, "TOPLEFT", LEFT_PAD, yOffset)
-        yOffset = yOffset - 30
+        yOffset = yOffset - 36
 
         -- Build items including "None" as the first entry
         local specProfileItems = { { text = "None (use character profile)", value = "" } }
@@ -314,14 +314,14 @@ local function PopulateProfilePane(scrollParent)
     yOffset = yOffset - 4
     local newHeader = AF.CreateTitledPane(scrollContent, "New Profile", CONTENT_WIDTH, 20)
     AF.SetPoint(newHeader, "TOPLEFT", scrollContent, "TOPLEFT", LEFT_PAD, yOffset)
-    yOffset = yOffset - 30
+    yOffset = yOffset - 36
 
     local newDesc = AF.CreateFontString(scrollContent,
         "Creates a new profile starting from default settings.", "disabled")
     AF.SetPoint(newDesc, "TOPLEFT", scrollContent, "TOPLEFT", LEFT_PAD + INDENT, yOffset)
     newDesc:SetWidth(CONTENT_WIDTH - INDENT)
     newDesc:SetJustifyH("LEFT")
-    yOffset = yOffset - 18
+    yOffset = yOffset - 26
 
     local newEditBox = AF.CreateEditBox(scrollContent, "Profile Name",
         CONTENT_WIDTH - INDENT - 80 - 8, 28, "normal")
@@ -346,14 +346,14 @@ local function PopulateProfilePane(scrollParent)
     yOffset = yOffset - 4
     local copyHeader = AF.CreateTitledPane(scrollContent, "Copy From", CONTENT_WIDTH, 20)
     AF.SetPoint(copyHeader, "TOPLEFT", scrollContent, "TOPLEFT", LEFT_PAD, yOffset)
-    yOffset = yOffset - 30
+    yOffset = yOffset - 36
 
     local copyDesc = AF.CreateFontString(scrollContent,
         "Overwrites the current profile settings with those from another profile.", "disabled")
     AF.SetPoint(copyDesc, "TOPLEFT", scrollContent, "TOPLEFT", LEFT_PAD + INDENT, yOffset)
     copyDesc:SetWidth(CONTENT_WIDTH - INDENT)
     copyDesc:SetJustifyH("LEFT")
-    yOffset = yOffset - 18
+    yOffset = yOffset - 26
 
     -- Populate only with profiles other than the active one
     local activeName = JT:GetActiveProfileName()
@@ -391,14 +391,14 @@ local function PopulateProfilePane(scrollParent)
     yOffset = yOffset - 4
     local resetHeader = AF.CreateTitledPane(scrollContent, "Reset Profile", CONTENT_WIDTH, 20)
     AF.SetPoint(resetHeader, "TOPLEFT", scrollContent, "TOPLEFT", LEFT_PAD, yOffset)
-    yOffset = yOffset - 30
+    yOffset = yOffset - 36
 
     local resetDesc = AF.CreateFontString(scrollContent,
         "Resets the current profile (\"" .. activeName .. "\") back to default settings.", "disabled")
     AF.SetPoint(resetDesc, "TOPLEFT", scrollContent, "TOPLEFT", LEFT_PAD + INDENT, yOffset)
     resetDesc:SetWidth(CONTENT_WIDTH - INDENT)
     resetDesc:SetJustifyH("LEFT")
-    yOffset = yOffset - 18
+    yOffset = yOffset - 26
 
     local resetBtn = AF.CreateButton(scrollContent, "Reset to Defaults", "red", 160, 28)
     AF.SetPoint(resetBtn, "TOPLEFT", scrollContent, "TOPLEFT", LEFT_PAD + INDENT, yOffset)
@@ -412,7 +412,7 @@ local function PopulateProfilePane(scrollParent)
     yOffset = yOffset - 4
     local deleteHeader = AF.CreateTitledPane(scrollContent, "Delete Profile", CONTENT_WIDTH, 20)
     AF.SetPoint(deleteHeader, "TOPLEFT", scrollContent, "TOPLEFT", LEFT_PAD, yOffset)
-    yOffset = yOffset - 30
+    yOffset = yOffset - 36
 
     local deleteDesc = AF.CreateFontString(scrollContent,
         "Permanently delete a profile. Cannot delete 'Default' or the active profile.",
@@ -420,7 +420,7 @@ local function PopulateProfilePane(scrollParent)
     AF.SetPoint(deleteDesc, "TOPLEFT", scrollContent, "TOPLEFT", LEFT_PAD + INDENT, yOffset)
     deleteDesc:SetWidth(CONTENT_WIDTH - INDENT)
     deleteDesc:SetJustifyH("LEFT")
-    yOffset = yOffset - 28
+    yOffset = yOffset - 36
 
     -- Profiles eligible for deletion: not Default, not active
     local deleteItems = {}
