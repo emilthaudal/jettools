@@ -25,24 +25,24 @@ local MODULE_ORDER = {
 
 -- Human-friendly display names for sidebar buttons
 local MODULE_LABELS = {
-    RangeIndicator        = "Range Indicator",
-    CurrentExpansionFilter = "Expansion Filter",
-    AutoRoleQueue         = "Auto Role Queue",
-    CharacterSheet        = "Character Sheet",
-    GearUpgradeRanks      = "Gear Ranks",
-    CDMAuraRemover        = "Aura Remover",
+    RangeIndicator          = "Range Indicator",
+    CurrentExpansionFilter  = "Expansion Filter",
+    AutoRoleQueue           = "Auto Role Queue",
+    CharacterSheet          = "Character Sheet",
+    GearUpgradeRanks        = "Gear Ranks",
+    CDMAuraRemover          = "Aura Remover",
     CharacterStatFormatting = "Stat Formatting",
-    SlashCommands         = "Slash Commands",
-    CombatStatus          = "Combat Status",
-    PetReminders          = "Pet Reminders",
-    StealthReminder       = "Stealth Reminder",
+    SlashCommands           = "Slash Commands",
+    CombatStatus            = "Combat Status",
+    PetReminders            = "Pet Reminders",
+    StealthReminder         = "Stealth Reminder",
 }
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Helpers
 -- ─────────────────────────────────────────────────────────────────────────────
 
--- Destroy all children of a frame (clear the right pane before re-populating)
+-- Destroy all children/regions of a frame (clear the right pane before re-populating)
 local function ClearFrame(parent)
     local children = { parent:GetChildren() }
     for _, child in ipairs(children) do
@@ -59,11 +59,11 @@ end
 -- Option control builder (AF widgets)
 -- ─────────────────────────────────────────────────────────────────────────────
 
+local CONTENT_WIDTH = 340
+local INDENT        = 16
+
 -- Returns the new yOffset after placing the control
 local function BuildOptionControl(parent, moduleName, schema, yOffset)
-    local CONTENT_WIDTH = 340
-    local INDENT        = 16
-
     local schemaType = schema.type
     local key        = schema.key
 
@@ -77,22 +77,21 @@ local function BuildOptionControl(parent, moduleName, schema, yOffset)
     end
 
     if schemaType == "header" then
-        -- AF titled pane (underline title) used as a section header
+        -- AF titled pane: underlined section header
         local pane = AF.CreateTitledPane(parent, schema.label, CONTENT_WIDTH, 20)
         AF.SetPoint(pane, "TOPLEFT", parent, "TOPLEFT", 0, yOffset)
         return yOffset - 30
 
     elseif schemaType == "subheader" then
-        local fs = AF.CreateFontString(parent, schema.label, "silver", "accent")
+        local fs = AF.CreateFontString(parent, schema.label, "gray")
         AF.SetPoint(fs, "TOPLEFT", parent, "TOPLEFT", INDENT, yOffset)
         return yOffset - 22
 
     elseif schemaType == "description" then
-        local fs = AF.CreateFontString(parent, schema.text, "disabled", "normal")
+        local fs = AF.CreateFontString(parent, schema.text, "disabled")
         AF.SetPoint(fs, "TOPLEFT", parent, "TOPLEFT", INDENT, yOffset)
         fs:SetWidth(CONTENT_WIDTH - INDENT)
         fs:SetJustifyH("LEFT")
-        -- GetStringHeight is only valid after layout; use a minimum of 18px
         local h = math.max(fs:GetStringHeight(), 18)
         return yOffset - h - 8
 
@@ -117,16 +116,18 @@ local function BuildOptionControl(parent, moduleName, schema, yOffset)
         return yOffset - 28
 
     elseif schemaType == "slider" then
-        local slider = AF.CreateSlider(parent, schema.label, CONTENT_WIDTH - INDENT, schema.min, schema.max, schema.step)
+        local slider = AF.CreateSlider(parent, schema.label, CONTENT_WIDTH - INDENT,
+            schema.min, schema.max, schema.step)
         AF.SetPoint(slider, "TOPLEFT", parent, "TOPLEFT", INDENT, yOffset)
         slider:SetValue(currentValue)
-        slider:SetOnValueChanged(function(val)
+        slider:SetAfterValueChanged(function(val)
             JT:SetModuleSetting(moduleName, key, val)
         end)
         return yOffset - 52
 
     elseif schemaType == "input" then
-        local editBox = AF.CreateEditBox(parent, schema.label, schema.width or CONTENT_WIDTH - INDENT, 32, "normal")
+        local editBox = AF.CreateEditBox(parent, schema.label,
+            schema.width or (CONTENT_WIDTH - INDENT), 32, "normal")
         AF.SetPoint(editBox, "TOPLEFT", parent, "TOPLEFT", INDENT, yOffset)
         editBox:SetText(currentValue or "")
         editBox:SetOnTextChanged(function(text)
@@ -135,40 +136,34 @@ local function BuildOptionControl(parent, moduleName, schema, yOffset)
         return yOffset - 50
 
     elseif schemaType == "dropdown" then
-        -- Build items list: schema.options is either array or {value=label} table
+        -- Build items list from schema.options (array or key=value table)
         local items = {}
         if type(schema.options) == "table" then
             if schema.options[1] then
-                -- indexed array of strings
                 for _, v in ipairs(schema.options) do
                     table.insert(items, { text = v, value = v })
                 end
             else
-                -- key=value pairs
                 for v, label in pairs(schema.options) do
                     table.insert(items, { text = label, value = v })
                 end
             end
         end
 
-        local dd = AF.CreateDropdown(parent, schema.width or CONTENT_WIDTH - INDENT, 8, "DOWN")
+        local dd = AF.CreateDropdown(parent, schema.width or (CONTENT_WIDTH - INDENT), 8)
         AF.SetPoint(dd, "TOPLEFT", parent, "TOPLEFT", INDENT, yOffset)
         dd:SetLabel(schema.label)
         dd:SetItems(items)
-        dd:SetOnSelect(function(item)
-            JT:SetModuleSetting(moduleName, key, item.value)
+        dd:SetOnSelect(function(value)
+            JT:SetModuleSetting(moduleName, key, value)
         end)
-        -- Set current selection
-        for _, item in ipairs(items) do
-            if item.value == currentValue then
-                dd:SetSelectedItem(item)
-                break
-            end
-        end
+        -- Set current selection by value
+        dd:SetSelectedValue(currentValue)
         return yOffset - 55
 
     elseif schemaType == "button" then
-        local btn = AF.CreateButton(parent, schema.label, "accent", schema.width or 120, 24)
+        local btn = AF.CreateButton(parent, schema.label, "accent",
+            schema.width or 120, 24)
         AF.SetPoint(btn, "TOPLEFT", parent, "TOPLEFT", INDENT, yOffset)
         btn:SetOnClick(schema.func)
         return yOffset - 36
@@ -198,7 +193,8 @@ end
 
 local currentModuleName = nil
 
-local function PopulateModulePane(scrollContent, moduleName)
+local function PopulateModulePane(scrollParent, moduleName)
+    local scrollContent = scrollParent.scrollContent
     ClearFrame(scrollContent)
     currentModuleName = moduleName
 
@@ -212,9 +208,10 @@ local function PopulateModulePane(scrollContent, moduleName)
         yOffset = BuildOptionControl(scrollContent, moduleName, item, yOffset)
     end
 
-    -- Ensure scroll content is tall enough
+    -- Tell the scroll frame the content height
     local totalHeight = math.abs(yOffset) + 16
-    scrollContent:SetHeight(math.max(totalHeight, 1))
+    scrollParent:SetContentHeight(math.max(totalHeight, 1))
+    scrollParent:ResetScroll()
 end
 
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -222,6 +219,7 @@ end
 -- ─────────────────────────────────────────────────────────────────────────────
 
 local profileDropdown = nil
+local activeScrollParent = nil  -- set when frame is built
 
 local function RefreshProfileDropdown()
     if not profileDropdown then return end
@@ -232,56 +230,37 @@ local function RefreshProfileDropdown()
         table.insert(items, { text = name, value = name })
     end
     profileDropdown:SetItems(items)
-
-    -- Highlight the active profile
-    local activeName = JT:GetActiveProfileName()
-    for _, item in ipairs(items) do
-        if item.value == activeName then
-            profileDropdown:SetSelectedItem(item)
-            break
-        end
-    end
+    profileDropdown:SetSelectedValue(JT:GetActiveProfileName())
 end
 
-local function BuildProfileStrip(parent, scrollContent)
+local function BuildProfileStrip(parent, scrollParent)
     -- Label
-    local label = AF.CreateFontString(parent, "Profile:", "white", "accent")
-    AF.SetPoint(label, "TOPLEFT", parent, "TOPLEFT", 0, -8)
+    local label = AF.CreateFontString(parent, "Profile:", "white")
+    AF.SetPoint(label, "TOPLEFT", parent, "TOPLEFT", 0, -10)
 
-    -- Dropdown (200px wide, max 8 items)
-    local dd = AF.CreateDropdown(parent, 200, 8, "DOWN")
-    AF.SetPoint(dd, "TOPLEFT", label, "TOPRIGHT", 8, 0)
-    dd:SetOnSelect(function(item)
-        JT:SetActiveProfile(item.value)
-        -- Re-populate current module pane to reflect new profile values
+    -- Dropdown (200px wide, max 8 items, standard downward orientation)
+    local dd = AF.CreateDropdown(parent, 200, 8)
+    AF.SetPoint(dd, "LEFT", label, "RIGHT", 8, 0)
+    dd:SetOnSelect(function(value)
+        JT:SetActiveProfile(value)
+        RefreshProfileDropdown()
         if currentModuleName then
-            PopulateModulePane(scrollContent, currentModuleName)
+            PopulateModulePane(scrollParent, currentModuleName)
         end
     end)
     profileDropdown = dd
 
     -- New Profile button
     local newBtn = AF.CreateButton(parent, "New", "accent", 60, 22)
-    AF.SetPoint(newBtn, "TOPLEFT", dd, "TOPRIGHT", 6, 0)
+    AF.SetPoint(newBtn, "LEFT", dd, "RIGHT", 6, 0)
     newBtn:SetOnClick(function()
-        AF.ShowGlobalDialog("New Profile", "Enter profile name:", function(name)
-            if name and name ~= "" then
-                if JT:CreateProfile(name) then
-                    JT:SetActiveProfile(name)
-                    RefreshProfileDropdown()
-                    if currentModuleName then
-                        PopulateModulePane(scrollContent, currentModuleName)
-                    end
-                else
-                    print("|cff00aaffJetTools|r: Profile '" .. name .. "' already exists.")
-                end
-            end
-        end)
+        -- AF may not have ShowGlobalDialog; fall back to a simple StaticPopup
+        StaticPopup_Show("JETTOOLS_NEW_PROFILE")
     end)
 
     -- Delete Profile button
     local delBtn = AF.CreateButton(parent, "Delete", "red", 60, 22)
-    AF.SetPoint(delBtn, "TOPLEFT", newBtn, "TOPRIGHT", 4, 0)
+    AF.SetPoint(delBtn, "LEFT", newBtn, "RIGHT", 4, 0)
     delBtn:SetOnClick(function()
         local activeName = JT:GetActiveProfileName()
         if activeName == "Default" then
@@ -292,42 +271,83 @@ local function BuildProfileStrip(parent, scrollContent)
             JT:SetActiveProfile("Default")
             RefreshProfileDropdown()
             if currentModuleName then
-                PopulateModulePane(scrollContent, currentModuleName)
+                PopulateModulePane(scrollParent, currentModuleName)
             end
         end
     end)
 
     RefreshProfileDropdown()
-    return 40 -- height consumed by the profile strip
 end
+
+-- StaticPopup for new profile name input
+StaticPopupDialogs["JETTOOLS_NEW_PROFILE"] = {
+    text = "Enter new profile name:",
+    button1 = "Create",
+    button2 = "Cancel",
+    hasEditBox = true,
+    maxLetters = 64,
+    OnAccept = function(self)
+        local name = self.editBox:GetText()
+        if name and name ~= "" then
+            if JT:CreateProfile(name) then
+                JT:SetActiveProfile(name)
+                RefreshProfileDropdown()
+                if currentModuleName and activeScrollParent then
+                    PopulateModulePane(activeScrollParent, currentModuleName)
+                end
+            else
+                print("|cff00aaffJetTools|r: Profile '" .. name .. "' already exists.")
+            end
+        end
+    end,
+    EditBoxOnEnterPressed = function(self)
+        local parent = self:GetParent()
+        local name = parent.editBox:GetText()
+        if name and name ~= "" then
+            if JT:CreateProfile(name) then
+                JT:SetActiveProfile(name)
+                RefreshProfileDropdown()
+                if currentModuleName and activeScrollParent then
+                    PopulateModulePane(activeScrollParent, currentModuleName)
+                end
+            else
+                print("|cff00aaffJetTools|r: Profile '" .. name .. "' already exists.")
+            end
+        end
+        parent:Hide()
+    end,
+    timeout = 0,
+    whileDead = true,
+    hideOnEscape = true,
+    preferredIndex = 3,
+}
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Main options frame construction
 -- ─────────────────────────────────────────────────────────────────────────────
 
--- Dimensions
-local FRAME_W       = 820
-local FRAME_H       = 600
-local SIDEBAR_W     = 160
-local SIDEBAR_PAD   = 8
-local BTN_H         = 28
-local RIGHT_PAD     = 12
-local PROFILE_H     = 44  -- height of the profile strip area
-local DIVIDER_W     = 1
+local FRAME_W     = 820
+local FRAME_H     = 600
+local SIDEBAR_W   = 160
+local SIDEBAR_PAD = 8
+local BTN_H       = 28
+local RIGHT_PAD   = 12
+local PROFILE_H   = 44
+local DIVIDER_W   = 1
 
 local function CreateOptionsFrame()
-    -- Main panel (AF headered frame: draggable, close button, title)
-    local frame = AF.CreateHeaderedFrame(UIParent, "JetToolsOptionsFrame", "|cff00aaffJet|r|cffaa66ffTools|r", FRAME_W, FRAME_H, "DIALOG", 100)
+    -- Main panel: AF headered frame (draggable, close button, title)
+    local frame = AF.CreateHeaderedFrame(UIParent, "JetToolsOptionsFrame",
+        "|cff00aaffJet|r|cffaa66ffTools|r", FRAME_W, FRAME_H, "DIALOG", 100)
     frame:SetPoint("CENTER")
-    frame:SetClampedToScreen(true)
     frame:Hide()
 
-    -- Make Escape close it
+    -- Escape closes it
     table.insert(UISpecialFrames, "JetToolsOptionsFrame")
 
     -- ── Left sidebar ─────────────────────────────────────────────────────────
 
-    local sidebar = AF.CreateBorderedFrame(frame, nil, SIDEBAR_W, FRAME_H - 40, nil, "accent")
+    local sidebar = AF.CreateBorderedFrame(frame, nil, SIDEBAR_W, FRAME_H - 40)
     AF.SetPoint(sidebar, "TOPLEFT", frame, "TOPLEFT", SIDEBAR_PAD, -36)
 
     -- ── Vertical divider ─────────────────────────────────────────────────────
@@ -339,62 +359,57 @@ local function CreateOptionsFrame()
 
     -- ── Right pane ───────────────────────────────────────────────────────────
 
-    local rightX     = SIDEBAR_W + SIDEBAR_PAD * 2 + DIVIDER_W + RIGHT_PAD
-    local rightW     = FRAME_W - rightX - RIGHT_PAD
-    local rightH     = FRAME_H - 40 - PROFILE_H - 8
+    local rightX  = SIDEBAR_W + SIDEBAR_PAD * 2 + DIVIDER_W + RIGHT_PAD
+    local rightW  = FRAME_W - rightX - RIGHT_PAD
+    local rightH  = FRAME_H - 40 - PROFILE_H - 8
 
-    -- Profile strip container (above the scroll frame)
+    -- Profile strip container (above scroll frame)
     local profileStrip = CreateFrame("Frame", nil, frame)
     profileStrip:SetSize(rightW, PROFILE_H)
     profileStrip:SetPoint("TOPLEFT", frame, "TOPLEFT", rightX, -36)
 
     -- Scroll frame for module settings
-    local scrollFrame = AF.CreateScrollFrame(frame, nil, rightW, rightH, nil, nil)
-    AF.SetPoint(scrollFrame, "TOPLEFT", profileStrip, "BOTTOMLEFT", 0, -4)
+    local scrollParent = AF.CreateScrollFrame(frame, nil, rightW, rightH)
+    AF.SetPoint(scrollParent, "TOPLEFT", profileStrip, "BOTTOMLEFT", 0, -4)
+    activeScrollParent = scrollParent
 
-    -- The scrollable content frame (where widgets are placed)
-    local scrollContent = scrollFrame.scrollContent
-    scrollContent:SetWidth(rightW - 20) -- leave room for scrollbar
-
-    -- Build profile strip (needs scrollContent ref for live refresh)
-    BuildProfileStrip(profileStrip, scrollContent)
+    -- Build profile strip (needs scrollParent ref for live refresh)
+    BuildProfileStrip(profileStrip, scrollParent)
 
     -- ── Sidebar module buttons ────────────────────────────────────────────────
 
     local sidebarButtons = {}
-    local buttonGroupHighlight
+    local Highlight  -- forward ref, assigned after CreateButtonGroup
 
     for i, moduleName in ipairs(MODULE_ORDER) do
         local label = MODULE_LABELS[moduleName] or moduleName
-        local btn = AF.CreateButton(sidebar, label, "normal", SIDEBAR_W - SIDEBAR_PAD * 2, BTN_H)
-        AF.SetPoint(btn, "TOPLEFT", sidebar, "TOPLEFT", SIDEBAR_PAD, -(SIDEBAR_PAD + (i - 1) * (BTN_H + 4)))
+        local btn = AF.CreateButton(sidebar, label, "widget",
+            SIDEBAR_W - SIDEBAR_PAD * 2, BTN_H)
+        btn.id = i  -- set id so ButtonGroup Highlight(i) works
+        AF.SetPoint(btn, "TOPLEFT", sidebar, "TOPLEFT",
+            SIDEBAR_PAD, -(SIDEBAR_PAD + (i - 1) * (BTN_H + 4)))
 
-        -- Capture moduleName in a closure
         local capturedName = moduleName
+        local capturedIndex = i
         btn:SetOnClick(function()
-            if buttonGroupHighlight then
-                buttonGroupHighlight(i)
-            end
-            PopulateModulePane(scrollContent, capturedName)
+            if Highlight then Highlight(capturedIndex) end
+            PopulateModulePane(scrollParent, capturedName)
         end)
 
         sidebarButtons[i] = btn
     end
 
-    -- Wire up ButtonGroup for radio-style highlight
-    buttonGroupHighlight = AF.CreateButtonGroup(sidebarButtons,
+    -- ButtonGroup: radio-style highlight. Callbacks receive (button, buttonId).
+    Highlight = AF.CreateButtonGroup(sidebarButtons,
         function(btn) btn:SetColor("accent") end,   -- onSelect
-        function(btn) btn:SetColor("normal") end,   -- onDeselect
-        nil                                          -- onClick handled above
+        function(btn) btn:SetColor("widget") end    -- onDeselect
     )
 
     -- Select first module by default
     if #sidebarButtons > 0 then
-        buttonGroupHighlight(1)
-        PopulateModulePane(scrollContent, MODULE_ORDER[1])
+        Highlight(1)
+        PopulateModulePane(scrollParent, MODULE_ORDER[1])
     end
-
-    frame.RefreshProfileDropdown = RefreshProfileDropdown
 
     return frame
 end
