@@ -103,6 +103,7 @@ end
 -- ─────────────────────────────────────────────────────────────────────────────
 
 local CONTENT_WIDTH = 340
+local LEFT_PAD      = 12   -- left margin for all content within the scroll pane
 local INDENT        = 16
 
 -- Returns the new yOffset after placing the control
@@ -121,17 +122,17 @@ local function BuildOptionControl(parent, moduleName, schema, yOffset)
 
     if schemaType == "header" then
         local pane = AF.CreateTitledPane(parent, schema.label, CONTENT_WIDTH, 20)
-        AF.SetPoint(pane, "TOPLEFT", parent, "TOPLEFT", 0, yOffset)
+        AF.SetPoint(pane, "TOPLEFT", parent, "TOPLEFT", LEFT_PAD, yOffset)
         return yOffset - 30
 
     elseif schemaType == "subheader" then
         local fs = AF.CreateFontString(parent, schema.label, "gray")
-        AF.SetPoint(fs, "TOPLEFT", parent, "TOPLEFT", INDENT, yOffset)
+        AF.SetPoint(fs, "TOPLEFT", parent, "TOPLEFT", LEFT_PAD + INDENT, yOffset)
         return yOffset - 22
 
     elseif schemaType == "description" then
         local fs = AF.CreateFontString(parent, schema.text, "disabled")
-        AF.SetPoint(fs, "TOPLEFT", parent, "TOPLEFT", INDENT, yOffset)
+        AF.SetPoint(fs, "TOPLEFT", parent, "TOPLEFT", LEFT_PAD + INDENT, yOffset)
         fs:SetWidth(CONTENT_WIDTH - INDENT)
         fs:SetJustifyH("LEFT")
         local h = math.max(fs:GetStringHeight(), 18)
@@ -153,14 +154,14 @@ local function BuildOptionControl(parent, moduleName, schema, yOffset)
         local cb = AF.CreateCheckButton(parent, schema.label, function(checked)
             onChange(checked)
         end)
-        AF.SetPoint(cb, "TOPLEFT", parent, "TOPLEFT", indent, yOffset)
+        AF.SetPoint(cb, "TOPLEFT", parent, "TOPLEFT", LEFT_PAD + indent, yOffset)
         cb:SetChecked(currentValue)
         return yOffset - 28
 
     elseif schemaType == "slider" then
         local slider = AF.CreateSlider(parent, schema.label, CONTENT_WIDTH - INDENT,
             schema.min, schema.max, schema.step)
-        AF.SetPoint(slider, "TOPLEFT", parent, "TOPLEFT", INDENT, yOffset)
+        AF.SetPoint(slider, "TOPLEFT", parent, "TOPLEFT", LEFT_PAD + INDENT, yOffset)
         slider:SetValue(currentValue)
         slider:SetAfterValueChanged(function(val)
             JT:SetModuleSetting(moduleName, key, val)
@@ -170,7 +171,7 @@ local function BuildOptionControl(parent, moduleName, schema, yOffset)
     elseif schemaType == "input" then
         local editBox = AF.CreateEditBox(parent, schema.label,
             schema.width or (CONTENT_WIDTH - INDENT), 32, "normal")
-        AF.SetPoint(editBox, "TOPLEFT", parent, "TOPLEFT", INDENT, yOffset)
+        AF.SetPoint(editBox, "TOPLEFT", parent, "TOPLEFT", LEFT_PAD + INDENT, yOffset)
         editBox:SetText(currentValue or "")
         editBox:SetOnTextChanged(function(text)
             JT:SetModuleSetting(moduleName, key, text)
@@ -192,7 +193,7 @@ local function BuildOptionControl(parent, moduleName, schema, yOffset)
         end
 
         local dd = AF.CreateDropdown(parent, schema.width or (CONTENT_WIDTH - INDENT), 8)
-        AF.SetPoint(dd, "TOPLEFT", parent, "TOPLEFT", INDENT, yOffset)
+        AF.SetPoint(dd, "TOPLEFT", parent, "TOPLEFT", LEFT_PAD + INDENT, yOffset)
         dd:SetLabel(schema.label)
         dd:SetItems(items)
         dd:SetOnSelect(function(value)
@@ -204,7 +205,7 @@ local function BuildOptionControl(parent, moduleName, schema, yOffset)
     elseif schemaType == "button" then
         local btn = AF.CreateButton(parent, schema.label, "accent",
             schema.width or 120, 24)
-        AF.SetPoint(btn, "TOPLEFT", parent, "TOPLEFT", INDENT, yOffset)
+        AF.SetPoint(btn, "TOPLEFT", parent, "TOPLEFT", LEFT_PAD + INDENT, yOffset)
         btn:SetOnClick(schema.func)
         return yOffset - 36
 
@@ -217,7 +218,7 @@ local function BuildOptionControl(parent, moduleName, schema, yOffset)
                 JT:SetModuleSetting(moduleName, key, { r = r, g = g, b = b, a = a })
             end
         )
-        AF.SetPoint(cp, "TOPLEFT", parent, "TOPLEFT", INDENT, yOffset)
+        AF.SetPoint(cp, "TOPLEFT", parent, "TOPLEFT", LEFT_PAD + INDENT, yOffset)
         if currentValue then
             cp:SetColor(currentValue.r, currentValue.g, currentValue.b, currentValue.a or 1)
         end
@@ -243,7 +244,7 @@ local function PopulateProfilePane(scrollParent)
     -- ── Section: Active Profile ───────────────────────────────────────────────
 
     local profileHeader = AF.CreateTitledPane(scrollContent, "Profile", CONTENT_WIDTH, 20)
-    AF.SetPoint(profileHeader, "TOPLEFT", scrollContent, "TOPLEFT", 0, yOffset)
+    AF.SetPoint(profileHeader, "TOPLEFT", scrollContent, "TOPLEFT", LEFT_PAD, yOffset)
     yOffset = yOffset - 30
 
     -- Profile selector dropdown
@@ -253,7 +254,7 @@ local function PopulateProfilePane(scrollParent)
     end
 
     local profileDD = AF.CreateDropdown(scrollContent, CONTENT_WIDTH - INDENT, 10)
-    AF.SetPoint(profileDD, "TOPLEFT", scrollContent, "TOPLEFT", INDENT, yOffset)
+    AF.SetPoint(profileDD, "TOPLEFT", scrollContent, "TOPLEFT", LEFT_PAD + INDENT, yOffset)
     profileDD:SetLabel("Active Profile")
     profileDD:SetItems(profileItems)
     profileDD:SetSelectedValue(JT:GetActiveProfileName())
@@ -270,7 +271,7 @@ local function PopulateProfilePane(scrollParent)
     if numSpecs > 0 then
         yOffset = yOffset - 4
         local specHeader = AF.CreateTitledPane(scrollContent, "Spec-Specific Profiles", CONTENT_WIDTH, 20)
-        AF.SetPoint(specHeader, "TOPLEFT", scrollContent, "TOPLEFT", 0, yOffset)
+        AF.SetPoint(specHeader, "TOPLEFT", scrollContent, "TOPLEFT", LEFT_PAD, yOffset)
         yOffset = yOffset - 30
 
         -- Build items including "None" as the first entry
@@ -287,7 +288,7 @@ local function PopulateProfilePane(scrollParent)
                 local specLabel = iconStr .. (specName or ("Spec " .. i))
 
                 local specDD = AF.CreateDropdown(scrollContent, CONTENT_WIDTH - INDENT, 10)
-                AF.SetPoint(specDD, "TOPLEFT", scrollContent, "TOPLEFT", INDENT, yOffset)
+                AF.SetPoint(specDD, "TOPLEFT", scrollContent, "TOPLEFT", LEFT_PAD + INDENT, yOffset)
                 specDD:SetLabel(specLabel)
                 specDD:SetItems(specProfileItems)
 
@@ -312,19 +313,19 @@ local function PopulateProfilePane(scrollParent)
 
     yOffset = yOffset - 4
     local newHeader = AF.CreateTitledPane(scrollContent, "New Profile", CONTENT_WIDTH, 20)
-    AF.SetPoint(newHeader, "TOPLEFT", scrollContent, "TOPLEFT", 0, yOffset)
+    AF.SetPoint(newHeader, "TOPLEFT", scrollContent, "TOPLEFT", LEFT_PAD, yOffset)
     yOffset = yOffset - 30
 
     local newDesc = AF.CreateFontString(scrollContent,
         "Creates a new profile starting from default settings.", "disabled")
-    AF.SetPoint(newDesc, "TOPLEFT", scrollContent, "TOPLEFT", INDENT, yOffset)
+    AF.SetPoint(newDesc, "TOPLEFT", scrollContent, "TOPLEFT", LEFT_PAD + INDENT, yOffset)
     newDesc:SetWidth(CONTENT_WIDTH - INDENT)
     newDesc:SetJustifyH("LEFT")
     yOffset = yOffset - 18
 
     local newEditBox = AF.CreateEditBox(scrollContent, "Profile Name",
         CONTENT_WIDTH - INDENT - 80 - 8, 28, "normal")
-    AF.SetPoint(newEditBox, "TOPLEFT", scrollContent, "TOPLEFT", INDENT, yOffset)
+    AF.SetPoint(newEditBox, "TOPLEFT", scrollContent, "TOPLEFT", LEFT_PAD + INDENT, yOffset)
 
     local createBtn = AF.CreateButton(scrollContent, "Create", "accent", 80, 28)
     AF.SetPoint(createBtn, "LEFT", newEditBox, "RIGHT", 8, 0)
@@ -344,12 +345,12 @@ local function PopulateProfilePane(scrollParent)
 
     yOffset = yOffset - 4
     local copyHeader = AF.CreateTitledPane(scrollContent, "Copy From", CONTENT_WIDTH, 20)
-    AF.SetPoint(copyHeader, "TOPLEFT", scrollContent, "TOPLEFT", 0, yOffset)
+    AF.SetPoint(copyHeader, "TOPLEFT", scrollContent, "TOPLEFT", LEFT_PAD, yOffset)
     yOffset = yOffset - 30
 
     local copyDesc = AF.CreateFontString(scrollContent,
         "Overwrites the current profile settings with those from another profile.", "disabled")
-    AF.SetPoint(copyDesc, "TOPLEFT", scrollContent, "TOPLEFT", INDENT, yOffset)
+    AF.SetPoint(copyDesc, "TOPLEFT", scrollContent, "TOPLEFT", LEFT_PAD + INDENT, yOffset)
     copyDesc:SetWidth(CONTENT_WIDTH - INDENT)
     copyDesc:SetJustifyH("LEFT")
     yOffset = yOffset - 18
@@ -364,7 +365,7 @@ local function PopulateProfilePane(scrollParent)
     end
 
     local copyDD = AF.CreateDropdown(scrollContent, CONTENT_WIDTH - INDENT - 80 - 8, 10)
-    AF.SetPoint(copyDD, "TOPLEFT", scrollContent, "TOPLEFT", INDENT, yOffset)
+    AF.SetPoint(copyDD, "TOPLEFT", scrollContent, "TOPLEFT", LEFT_PAD + INDENT, yOffset)
     copyDD:SetItems(copyItems)
     if copyItems[1] then
         copyDD:SetSelectedValue(copyItems[1].value)
@@ -389,18 +390,18 @@ local function PopulateProfilePane(scrollParent)
 
     yOffset = yOffset - 4
     local resetHeader = AF.CreateTitledPane(scrollContent, "Reset Profile", CONTENT_WIDTH, 20)
-    AF.SetPoint(resetHeader, "TOPLEFT", scrollContent, "TOPLEFT", 0, yOffset)
+    AF.SetPoint(resetHeader, "TOPLEFT", scrollContent, "TOPLEFT", LEFT_PAD, yOffset)
     yOffset = yOffset - 30
 
     local resetDesc = AF.CreateFontString(scrollContent,
         "Resets the current profile (\"" .. activeName .. "\") back to default settings.", "disabled")
-    AF.SetPoint(resetDesc, "TOPLEFT", scrollContent, "TOPLEFT", INDENT, yOffset)
+    AF.SetPoint(resetDesc, "TOPLEFT", scrollContent, "TOPLEFT", LEFT_PAD + INDENT, yOffset)
     resetDesc:SetWidth(CONTENT_WIDTH - INDENT)
     resetDesc:SetJustifyH("LEFT")
     yOffset = yOffset - 18
 
     local resetBtn = AF.CreateButton(scrollContent, "Reset to Defaults", "red", 160, 28)
-    AF.SetPoint(resetBtn, "TOPLEFT", scrollContent, "TOPLEFT", INDENT, yOffset)
+    AF.SetPoint(resetBtn, "TOPLEFT", scrollContent, "TOPLEFT", LEFT_PAD + INDENT, yOffset)
     resetBtn:SetOnClick(function()
         StaticPopup_Show("JETTOOLS_RESET_PROFILE")
     end)
@@ -410,13 +411,13 @@ local function PopulateProfilePane(scrollParent)
 
     yOffset = yOffset - 4
     local deleteHeader = AF.CreateTitledPane(scrollContent, "Delete Profile", CONTENT_WIDTH, 20)
-    AF.SetPoint(deleteHeader, "TOPLEFT", scrollContent, "TOPLEFT", 0, yOffset)
+    AF.SetPoint(deleteHeader, "TOPLEFT", scrollContent, "TOPLEFT", LEFT_PAD, yOffset)
     yOffset = yOffset - 30
 
     local deleteDesc = AF.CreateFontString(scrollContent,
         "Permanently delete a profile. Cannot delete 'Default' or the active profile.",
         "disabled")
-    AF.SetPoint(deleteDesc, "TOPLEFT", scrollContent, "TOPLEFT", INDENT, yOffset)
+    AF.SetPoint(deleteDesc, "TOPLEFT", scrollContent, "TOPLEFT", LEFT_PAD + INDENT, yOffset)
     deleteDesc:SetWidth(CONTENT_WIDTH - INDENT)
     deleteDesc:SetJustifyH("LEFT")
     yOffset = yOffset - 28
@@ -430,7 +431,7 @@ local function PopulateProfilePane(scrollParent)
     end
 
     local deleteDD = AF.CreateDropdown(scrollContent, CONTENT_WIDTH - INDENT - 80 - 8, 10)
-    AF.SetPoint(deleteDD, "TOPLEFT", scrollContent, "TOPLEFT", INDENT, yOffset)
+    AF.SetPoint(deleteDD, "TOPLEFT", scrollContent, "TOPLEFT", LEFT_PAD + INDENT, yOffset)
     deleteDD:SetItems(deleteItems)
     if deleteItems[1] then
         deleteDD:SetSelectedValue(deleteItems[1].value)
