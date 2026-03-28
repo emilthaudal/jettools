@@ -3,9 +3,6 @@
 
 local addonName, JT = ...
 
----@type AbstractFramework
-local AF = _G.AbstractFramework
-
 -- Expose addon table globally for debugging
 JetTools = JT
 
@@ -79,6 +76,23 @@ local MODULE_DEFAULTS = {
         matchAnchorWidth = false,
         offsetX = 0,
         offsetY = 0,
+    },
+    CombatTimer = {
+        enabled = false,
+        fontSize = 24,
+        fontFace = "Friz Quadrata TT",
+        format = "MM:SS",
+        printOnEnd = false,
+        posX = 0,
+        posY = -200,
+    },
+    CombatRes = {
+        enabled = false,
+        fontSize = 18,
+        fontFace = "Friz Quadrata TT",
+        posX = 0,
+        posY = -250,
+        showLabel = true,
     },
 }
 
@@ -393,11 +407,6 @@ frame:SetScript("OnEvent", function(self, event, arg1)
         for _, profile in pairs(JetToolsDB.profiles) do
             profile.modules = profile.modules or {}
             DeepCopy({ modules = MODULE_DEFAULTS }, profile)
-        end
-
-        -- Register with AbstractFramework if available
-        if AF then
-            AF.RegisterAddon("JetTools", "JT")
         end
 
         print("|cff00aaffJetTools|r loaded. Type |cffaa66ff/jt|r for options.")
