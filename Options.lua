@@ -303,13 +303,28 @@ local function GetDropdownPopup()
     sf:SetScrollChild(sc)
     popup.scrollContent = sc
 
-    -- Scrollbar for the popup's item list
-    local bar = CreateFrame("Slider", nil, popup, "UIPanelScrollBarTemplate")
+    -- Scrollbar for the popup's item list — plain Slider, no template.
+    -- UIPanelScrollBarTemplate fires OnValueChanged during SetValue(0) before
+    -- our scroll frame is linked, causing a SecureScrollTemplates crash.
+    local bar = CreateFrame("Slider", nil, popup)
     popup.scrollBar = bar
+    bar:SetOrientation("VERTICAL")
     bar:SetMinMaxValues(0, 0)
     bar:SetValue(0)
     bar:SetValueStep(20)
     bar:SetObeyStepOnDrag(true)
+
+    -- Track background
+    local barBg = bar:CreateTexture(nil, "BACKGROUND")
+    barBg:SetAllPoints()
+    barBg:SetColorTexture(0.08, 0.08, 0.08, 1)
+
+    -- Thumb
+    bar:SetThumbTexture("Interface\\Buttons\\WHITE8X8")
+    local thumb = bar:GetThumbTexture()
+    thumb:SetSize(6, 30)
+    thumb:SetVertexColor(0.35, 0.55, 0.9, 0.9)
+
     bar:SetScript("OnValueChanged", function(self, val)
         sf:SetVerticalScroll(val)
     end)
@@ -448,8 +463,8 @@ local function JT_CreateDropdown(parent, width, maxVisible)
 
         if needsBar then
             bar:ClearAllPoints()
-            bar:SetPoint("TOPRIGHT",    popup, "TOPRIGHT",    0, -16)
-            bar:SetPoint("BOTTOMRIGHT", popup, "BOTTOMRIGHT", 0,  16)
+            bar:SetPoint("TOPRIGHT",    popup, "TOPRIGHT",    -1, -1)
+            bar:SetPoint("BOTTOMRIGHT", popup, "BOTTOMRIGHT", -1,  1)
             bar:Show()
         else
             bar:Hide()
@@ -532,14 +547,28 @@ local function JT_CreateScrollFrame(parent, width, height)
     scrollFrame:SetScrollChild(content)
     scrollFrame.scrollContent = content
 
-    -- Scrollbar
-    local bar = CreateFrame("Slider", nil, scrollFrame, "UIPanelScrollBarTemplate")
-    bar:SetPoint("TOPRIGHT", scrollFrame, "TOPRIGHT", 0, -16)
-    bar:SetPoint("BOTTOMRIGHT", scrollFrame, "BOTTOMRIGHT", 0, 16)
+    -- Scrollbar — plain Slider (no template) to avoid SecureScrollTemplates
+    -- firing SetVerticalScroll during construction before the link is set up.
+    local bar = CreateFrame("Slider", nil, scrollFrame)
+    bar:SetOrientation("VERTICAL")
+    bar:SetPoint("TOPRIGHT",    scrollFrame, "TOPRIGHT",    0, 0)
+    bar:SetPoint("BOTTOMRIGHT", scrollFrame, "BOTTOMRIGHT", 0, 0)
+    bar:SetWidth(8)
+
+    local barBg = bar:CreateTexture(nil, "BACKGROUND")
+    barBg:SetAllPoints()
+    barBg:SetColorTexture(0.08, 0.08, 0.15, 0.8)
+
+    bar:SetThumbTexture("Interface\\Buttons\\WHITE8X8")
+    local thumb = bar:GetThumbTexture()
+    thumb:SetSize(6, 40)
+    thumb:SetVertexColor(0.35, 0.55, 0.9, 0.85)
+
     bar:SetMinMaxValues(0, 0)
     bar:SetValue(0)
     bar:SetValueStep(20)
     bar:SetObeyStepOnDrag(true)
+    bar:Hide()
 
     bar:SetScript("OnValueChanged", function(self, val)
         scrollFrame:SetVerticalScroll(val)
@@ -1101,6 +1130,23 @@ local function CreateOptionsFrame()
     frame:SetBackdropBorderColor(0.3, 0.4, 0.6, 0.8)
     frame:Hide()
 
+    -- Auto-preview: show CombatTimer and CombatRes overlays while options are open
+    local PREVIEW_MODULES = { "CombatTimer", "CombatRes" }
+    frame:SetScript("OnShow", function()
+        -- Refresh the global font dropdown to reflect the current DB value
+        if frame._refreshGlobalFontDD then frame._refreshGlobalFontDD() end
+        for _, name in ipairs(PREVIEW_MODULES) do
+            local m = JT.modules[name]
+            if m and m.ShowPreview then m:ShowPreview() end
+        end
+    end)
+    frame:SetScript("OnHide", function()
+        for _, name in ipairs(PREVIEW_MODULES) do
+            local m = JT.modules[name]
+            if m and m.HidePreview then m:HidePreview() end
+        end
+    end)
+
     table.insert(UISpecialFrames, "JetToolsOptionsFrame")
 
     -- Title bar background
@@ -1119,6 +1165,38 @@ local function CreateOptionsFrame()
     local closeBtn = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
     closeBtn:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -2, -2)
     closeBtn:SetScript("OnClick", function() frame:Hide() end)
+
+    -- Global font dropdown — lives in the title bar to the right of the title text.
+    -- Operates on JetToolsDB.globalFont and broadcasts to all font-aware modules.
+    local globalFontLabel = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    globalFontLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 120, -10)
+    globalFontLabel:SetText("Global Font:")
+    globalFontLabel:SetTextColor(0.7, 0.7, 0.7)
+
+    local globalFontDD = JT_CreateDropdown(frame, 180, 10)
+    -- Align dropdown vertically centered with the label; dropdown container is 28px tall
+    globalFontDD:SetPoint("TOPLEFT", globalFontLabel, "TOPRIGHT", 6, 7)
+    -- No label on the dropdown widget itself (the FontString above acts as label)
+    globalFontDD._label:SetText("")
+
+    -- Populate items and set initial selection once options frame exists
+    local function RefreshGlobalFontDD()
+        local fontItems = JT:GetAvailableFonts()
+        globalFontDD:SetItems(fontItems)
+        local cur = JetToolsDB and JetToolsDB.globalFont
+        if cur and cur ~= "" then
+            globalFontDD:SetSelectedValue(cur)
+        else
+            globalFontDD:SetSelectedValue(fontItems[1] and fontItems[1].value or nil)
+        end
+    end
+
+    globalFontDD:SetOnSelect(function(value)
+        JT:ApplyGlobalFont(value)
+    end)
+
+    -- Store refresh fn on the frame so OnShow can call it
+    frame._refreshGlobalFontDD = RefreshGlobalFontDD
 
     -- ── Left sidebar ─────────────────────────────────────────────────────────
 

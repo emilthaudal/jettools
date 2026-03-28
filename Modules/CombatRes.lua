@@ -180,8 +180,10 @@ function CombatRes:ApplyPosition()
     if not resFrame then return end
     local settings = JT:GetModuleSettings("CombatRes")
     if not settings then return end
+    local anchorName = settings.anchorFrame
+    local anchor = (anchorName and anchorName ~= "" and _G[anchorName]) or UIParent
     resFrame:ClearAllPoints()
-    resFrame:SetPoint("CENTER", UIParent, "CENTER", settings.posX or 0, settings.posY or -250)
+    resFrame:SetPoint("CENTER", anchor, "CENTER", settings.posX or 0, settings.posY or -250)
 end
 
 -- ──────────────────────────────────────────────────────────────
@@ -196,6 +198,7 @@ function CombatRes:GetOptions()
         { type = "checkbox", label = "Show 'CR:' label", key = "showLabel", default = true },
         { type = "dropdown", label = "Font",          key = "fontFace",  options = GetAvailableFonts(), default = "Friz Quadrata TT" },
         { type = "slider",   label = "Font Size",     key = "fontSize",  min = 10, max = 64, step = 1,   default = 18  },
+        { type = "input",    label = "Anchor Frame (leave blank for screen centre)", key = "anchorFrame", width = 200 },
         { type = "slider",   label = "Position X",    key = "posX",      min = -900, max = 900, step = 1, default = 0    },
         { type = "slider",   label = "Position Y",    key = "posY",      min = -500, max = 500, step = 1, default = -250 },
     }
@@ -249,8 +252,31 @@ end
 function CombatRes:OnSettingChanged(key, value)
     if key == "fontSize" or key == "fontFace" then
         self:ApplySettings()
-    elseif key == "posX" or key == "posY" then
+    elseif key == "posX" or key == "posY" or key == "anchorFrame" then
         self:ApplyPosition()
     end
-    UpdateDisplay()
+    -- Keep preview live while options panel is open
+    if _G["JetToolsOptionsFrame"] and _G["JetToolsOptionsFrame"]:IsShown() then
+        self:ShowPreview()
+    else
+        UpdateDisplay()
+    end
+end
+
+function CombatRes:ShowPreview()
+    if not resFrame then CreateResFrame() end
+    self:ApplySettings()
+    self:ApplyPosition()
+    if resText then
+        local settings = JT:GetModuleSettings("CombatRes")
+        local label = (settings and settings.showLabel) and "|cffaaaaff" .. "CR:|r " or ""
+        resText:SetText(label .. "|cff44ff442/2|r |cffcccccc0:30|r")
+    end
+    if resFrame then resFrame:Show() end
+end
+
+function CombatRes:HidePreview()
+    if not isEnabled and resFrame then
+        resFrame:Hide()
+    end
 end

@@ -140,8 +140,10 @@ function CombatTimer:ApplyPosition()
     if not timerFrame then return end
     local settings = JT:GetModuleSettings("CombatTimer")
     if not settings then return end
+    local anchorName = settings.anchorFrame
+    local anchor = (anchorName and anchorName ~= "" and _G[anchorName]) or UIParent
     timerFrame:ClearAllPoints()
-    timerFrame:SetPoint("CENTER", UIParent, "CENTER", settings.posX or 0, settings.posY or -200)
+    timerFrame:SetPoint("CENTER", anchor, "CENTER", settings.posX or 0, settings.posY or -200)
 end
 
 -- ──────────────────────────────────────────────────────────────
@@ -159,6 +161,7 @@ function CombatTimer:GetOptions()
             { text = "M:SS.d",   value = "MM:SS.d" },
         }, default = "MM:SS" },
         { type = "checkbox", label = "Print duration to chat on combat end", key = "printOnEnd", default = false },
+        { type = "input",    label = "Anchor Frame (leave blank for screen centre)", key = "anchorFrame", width = 200 },
         { type = "slider",   label = "Position X",         key = "posX",        min = -900, max = 900, step = 1, default = 0    },
         { type = "slider",   label = "Position Y",         key = "posY",        min = -500, max = 500, step = 1, default = -200 },
     }
@@ -229,7 +232,29 @@ end
 function CombatTimer:OnSettingChanged(key, value)
     if key == "fontSize" or key == "fontFace" then
         self:ApplySettings()
-    elseif key == "posX" or key == "posY" then
+    elseif key == "posX" or key == "posY" or key == "anchorFrame" then
         self:ApplyPosition()
+    end
+    -- Keep preview live while options panel is open
+    if _G["JetToolsOptionsFrame"] and _G["JetToolsOptionsFrame"]:IsShown() then
+        self:ShowPreview()
+    end
+end
+
+function CombatTimer:ShowPreview()
+    if not timerFrame then CreateTimerFrame() end
+    self:ApplySettings()
+    self:ApplyPosition()
+    if timerText then
+        timerText:SetText("0:00")
+        timerText:SetTextColor(0.7, 0.7, 0.7)
+    end
+    if timerFrame then timerFrame:Show() end
+end
+
+function CombatTimer:HidePreview()
+    -- Only hide if the module is not actively enabled (leave combat display running)
+    if not isEnabled and timerFrame then
+        timerFrame:Hide()
     end
 end

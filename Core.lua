@@ -85,6 +85,7 @@ local MODULE_DEFAULTS = {
         printOnEnd = false,
         posX = 0,
         posY = -200,
+        anchorFrame = "",
     },
     CombatRes = {
         enabled = false,
@@ -93,6 +94,7 @@ local MODULE_DEFAULTS = {
         posX = 0,
         posY = -250,
         showLabel = true,
+        anchorFrame = "",
     },
 }
 
@@ -403,6 +405,9 @@ frame:SetScript("OnEvent", function(self, event, arg1)
         -- Per-character per-spec profile overrides
         JetToolsDB.specAssignments = JetToolsDB.specAssignments or {}
 
+        -- Global font override (applies to all font-having modules across all profiles)
+        JetToolsDB.globalFont = JetToolsDB.globalFont or ""
+
         -- Fill in any missing default keys for every existing profile
         for _, profile in pairs(JetToolsDB.profiles) do
             profile.modules = profile.modules or {}
@@ -443,6 +448,47 @@ frame:SetScript("OnEvent", function(self, event, arg1)
         end
     end
 end)
+
+-- Modules that expose a fontFace setting (for global font override)
+local FONT_MODULES = { "RangeIndicator", "CombatStatus", "CombatTimer", "CombatRes", "BuffBarStyling" }
+
+-- Fallback font list (used when LibSharedMedia-3.0 is not available)
+local FALLBACK_FONTS = {
+    ["Friz Quadrata TT"] = true,
+    ["Morpheus"]         = true,
+    ["Skurri"]           = true,
+    ["Arial Narrow"]     = true,
+}
+
+-- Return a list of {text, value} font entries for use in dropdowns.
+-- Uses LibSharedMedia-3.0 if available, otherwise returns the WoW built-in set.
+function JT:GetAvailableFonts()
+    local LSM = LibStub and LibStub("LibSharedMedia-3.0", true)
+    if LSM then
+        local list = {}
+        for _, name in ipairs(LSM:List("font")) do
+            list[#list + 1] = { text = name, value = name }
+        end
+        return list
+    end
+    local list = {}
+    for name in pairs(FALLBACK_FONTS) do
+        list[#list + 1] = { text = name, value = name }
+    end
+    return list
+end
+
+-- Apply a font to all font-aware modules and persist it globally
+function JT:ApplyGlobalFont(fontName)
+    if not fontName or fontName == "" then return end
+    JetToolsDB.globalFont = fontName
+    for _, name in ipairs(FONT_MODULES) do
+        local settings = self:GetModuleSettings(name)
+        if settings then
+            self:SetModuleSetting(name, "fontFace", fontName)
+        end
+    end
+end
 
 -- Slash command
 SLASH_JETTOOLS1 = "/jt"
