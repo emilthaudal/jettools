@@ -674,11 +674,17 @@ local function BuildOptionControl(parent, moduleName, schema, yOffset)
     elseif schemaType == "dropdown" then
         local items = {}
         if type(schema.options) == "table" then
-            if schema.options[1] then
+            local first = schema.options[1]
+            if type(first) == "table" and first.text ~= nil then
+                -- Already {text, value} pairs — use directly
+                items = schema.options
+            elseif first ~= nil then
+                -- Plain string/value array — wrap each entry
                 for _, v in ipairs(schema.options) do
-                    table.insert(items, { text = v, value = v })
+                    table.insert(items, { text = tostring(v), value = v })
                 end
             else
+                -- Key→label map (no numeric index)
                 for v, label in pairs(schema.options) do
                     table.insert(items, { text = label, value = v })
                 end
