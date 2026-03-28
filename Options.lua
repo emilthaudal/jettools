@@ -159,34 +159,53 @@ end
 -- Slider with title label and value display
 local function JT_CreateSlider(parent, text, width, minVal, maxVal, step)
     width = width or 300
+    -- Container: label (14px) + track (16px) + gap (4px) + value row (14px) = 48px
     local container = CreateFrame("Frame", nil, parent)
-    container:SetSize(width, 46)
+    container:SetSize(width, 48)
 
+    -- Label above
     local label = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     label:SetPoint("TOPLEFT", container, "TOPLEFT", 0, 0)
     label:SetText(text or "")
     label:SetTextColor(0.9, 0.9, 0.9)
 
-    local slider = CreateFrame("Slider", nil, container, "OptionsSliderTemplate")
+    -- Plain slider (no template) — avoids OptionsSliderTemplate's Low/High/Text
+    -- children which fight with our own layout.
+    local slider = CreateFrame("Slider", nil, container, "BackdropTemplate")
+    slider:SetOrientation("HORIZONTAL")
     slider:SetPoint("TOPLEFT", container, "TOPLEFT", 0, -16)
-    slider:SetWidth(width)
-    slider:SetHeight(16)
+    slider:SetSize(width, 16)
     slider:SetMinMaxValues(minVal or 0, maxVal or 100)
     slider:SetValueStep(step or 1)
     slider:SetObeyStepOnDrag(true)
+    slider:EnableMouse(true)
 
-    -- The OptionsSliderTemplate creates Low/High labels; clear them
-    local lo = _G[slider:GetName() and (slider:GetName() .. "Low")]
-    local hi = _G[slider:GetName() and (slider:GetName() .. "High")]
-    local tt = _G[slider:GetName() and (slider:GetName() .. "Text")]
-    if lo then lo:SetText(tostring(minVal or 0)) end
-    if hi then hi:SetText(tostring(maxVal or 100)) end
-    if tt then tt:SetText("") end
+    -- Track background
+    local trackBg = slider:CreateTexture(nil, "BACKGROUND")
+    trackBg:SetAllPoints()
+    trackBg:SetColorTexture(0.15, 0.15, 0.15, 1)
 
-    -- Value readout
+    -- Thumb texture (small bright nub)
+    slider:SetThumbTexture("Interface\\Buttons\\WHITE8X8")
+    local thumb = slider:GetThumbTexture()
+    thumb:SetSize(8, 20)
+    thumb:SetVertexColor(0.4, 0.6, 1, 1)
+
+    -- Min/Max labels flanking the track
+    local loLabel = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    loLabel:SetPoint("TOPLEFT", slider, "BOTTOMLEFT", 0, -2)
+    loLabel:SetText(tostring(minVal or 0))
+    loLabel:SetTextColor(0.55, 0.55, 0.55)
+
+    local hiLabel = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    hiLabel:SetPoint("TOPRIGHT", slider, "BOTTOMRIGHT", 0, -2)
+    hiLabel:SetText(tostring(maxVal or 100))
+    hiLabel:SetTextColor(0.55, 0.55, 0.55)
+
+    -- Current value centred below the track
     local valLabel = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    valLabel:SetPoint("TOPLEFT", slider, "BOTTOMLEFT", 0, -2)
-    valLabel:SetTextColor(0.8, 0.8, 0.8)
+    valLabel:SetPoint("TOP", slider, "BOTTOM", 0, -2)
+    valLabel:SetTextColor(0.9, 0.9, 0.9)
 
     local function UpdateVal(v)
         v = math.floor(v / (step or 1) + 0.5) * (step or 1)
@@ -274,14 +293,40 @@ local function GetDropdownPopup()
     popup:SetBackdropBorderColor(0.3, 0.5, 0.8, 0.8)
     popup:Hide()
 
-    popup.buttons = {}
     popup._owner = nil
+
+    -- Inner scroll frame that holds item rows
+    local sf = CreateFrame("ScrollFrame", nil, popup)
+    popup.scrollFrame = sf
+
+    local sc = CreateFrame("Frame", nil, sf)
+    sf:SetScrollChild(sc)
+    popup.scrollContent = sc
+
+    -- Scrollbar for the popup's item list
+    local bar = CreateFrame("Slider", nil, popup, "UIPanelScrollBarTemplate")
+    popup.scrollBar = bar
+    bar:SetMinMaxValues(0, 0)
+    bar:SetValue(0)
+    bar:SetValueStep(20)
+    bar:SetObeyStepOnDrag(true)
+    bar:SetScript("OnValueChanged", function(self, val)
+        sf:SetVerticalScroll(val)
+    end)
+    sf:SetScript("OnMouseWheel", function(self, delta)
+        local cur = bar:GetValue()
+        local mn, mx = bar:GetMinMaxValues()
+        bar:SetValue(math.max(mn, math.min(mx, cur - delta * 20)))
+    end)
 
     popup:SetScript("OnHide", function(self)
         self._owner = nil
+        -- Clear item rows so they don't leak between dropdowns
+        local children = { self.scrollContent:GetChildren() }
+        for _, c in ipairs(children) do c:Hide() end
     end)
 
-    -- Close if clicking outside
+    -- Close when clicking outside
     popup:SetScript("OnUpdate", function(self)
         if not self:IsShown() then return end
         if IsMouseButtonDown("LeftButton") then
@@ -315,7 +360,6 @@ local function JT_CreateDropdown(parent, width, maxVisible)
     local btn = CreateFrame("Button", nil, container, "UIPanelButtonTemplate")
     btn:SetSize(width, 22)
     btn:SetPoint("TOPLEFT", container, "TOPLEFT", 0, 0)
-    -- Ensure a normal texture exists before tinting
     btn:SetNormalTexture("Interface\\Buttons\\WHITE8X8")
     btn:GetNormalTexture():SetVertexColor(0.25, 0.25, 0.35)
 
@@ -327,15 +371,15 @@ local function JT_CreateDropdown(parent, width, maxVisible)
     selText:SetText("--")
     btn._selText = selText
 
-    -- Arrow indicator
+    -- Arrow indicator — ▾ = U+25BE = UTF-8 E2 96 BE = \226\150\190
     local arrow = btn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     arrow:SetPoint("RIGHT", btn, "RIGHT", -4, 0)
-    arrow:SetText("\226\150\xbe") -- ▾
+    arrow:SetText("\226\150\190")
     arrow:SetTextColor(0.7, 0.7, 0.7)
 
-    container._items      = {}
-    container._selected   = nil
-    container._onSelect   = nil
+    container._items    = {}
+    container._selected = nil
+    container._onSelect = nil
 
     function container:SetLabel(text)
         label:SetText(text or "")
@@ -367,33 +411,59 @@ local function JT_CreateDropdown(parent, width, maxVisible)
     btn:SetScript("OnClick", function()
         local popup = GetDropdownPopup()
 
-        -- If already open for this dropdown, close it
+        -- Toggle: close if already open for this dropdown
         if popup:IsShown() and popup._owner == container then
             popup:Hide()
             return
         end
 
         popup._owner = container
-        popup:Show()
 
-        -- Clear old buttons
-        for _, b in ipairs(popup.buttons) do b:Hide() end
-
-        local itemHeight = 20
-        local visCount   = math.min(#container._items, maxVisible)
+        local items      = container._items
+        local itemH      = 20
+        local visCount   = math.min(#items, maxVisible)
+        local needsBar   = #items > maxVisible
+        local barW       = needsBar and 16 or 0
         local popW       = width
-        local popH       = visCount * itemHeight + 4
+        local popH       = visCount * itemH + 4
+
+        -- Layout scroll frame and bar inside popup
+        local sf  = popup.scrollFrame
+        local sc  = popup.scrollContent
+        local bar = popup.scrollBar
 
         popup:SetSize(popW, popH)
 
-        -- Position below the dropdown button
-        popup:ClearAllPoints()
-        popup:SetPoint("TOPLEFT", btn, "BOTTOMLEFT", 0, -2)
+        sf:ClearAllPoints()
+        sf:SetPoint("TOPLEFT",     popup, "TOPLEFT",     1, -1)
+        sf:SetPoint("BOTTOMRIGHT", popup, "BOTTOMRIGHT", -(1 + barW), 1)
 
-        -- Ensure we have enough button widgets
-        for i = #popup.buttons + 1, #container._items do
-            local b = CreateFrame("Button", nil, popup)
-            b:SetHeight(itemHeight)
+        sc:SetWidth(popW - 2 - barW)
+        sc:SetHeight(#items * itemH)
+
+        local scrollRange = math.max(0, #items * itemH - (popH - 2))
+        bar:SetMinMaxValues(0, scrollRange)
+        bar:SetValue(0)
+        sf:SetVerticalScroll(0)
+
+        if needsBar then
+            bar:ClearAllPoints()
+            bar:SetPoint("TOPRIGHT",    popup, "TOPRIGHT",    0, -16)
+            bar:SetPoint("BOTTOMRIGHT", popup, "BOTTOMRIGHT", 0,  16)
+            bar:Show()
+        else
+            bar:Hide()
+        end
+
+        -- Hide all existing item rows (they may belong to a prior dropdown)
+        local existing = { sc:GetChildren() }
+        for _, c in ipairs(existing) do c:Hide() end
+
+        -- Create or reuse item row buttons (keyed in popup._rows)
+        popup._rows = popup._rows or {}
+        for i = #popup._rows + 1, #items do
+            local b = CreateFrame("Button", nil, sc)
+            b:SetHeight(itemH)
             local bText = b:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
             bText:SetPoint("LEFT", b, "LEFT", 8, 0)
             bText:SetJustifyH("LEFT")
@@ -403,26 +473,31 @@ local function JT_CreateDropdown(parent, width, maxVisible)
             hl:SetAllPoints()
             hl:SetColorTexture(0.3, 0.5, 0.8, 0.25)
 
-            popup.buttons[i] = b
+            popup._rows[i] = b
         end
 
-        for idx, item in ipairs(container._items) do
-            local b = popup.buttons[idx]
-            b:SetPoint("TOPLEFT", popup, "TOPLEFT", 2, -(2 + (idx-1)*itemHeight))
-            b:SetWidth(popW - 4)
+        -- Populate rows for the current container's items
+        for idx, item in ipairs(items) do
+            local b = popup._rows[idx]
+            b:ClearAllPoints()
+            b:SetPoint("TOPLEFT", sc, "TOPLEFT", 0, -((idx-1) * itemH))
+            b:SetWidth(sc:GetWidth())
             b._text:SetText(item.text or tostring(item.value))
-            if item.value == container._selected then
-                b._text:SetTextColor(0.4, 0.8, 1)
-            else
-                b._text:SetTextColor(0.9, 0.9, 0.9)
-            end
+            b._text:SetTextColor(
+                item.value == container._selected and 0.4 or 0.9,
+                item.value == container._selected and 0.8 or 0.9,
+                item.value == container._selected and 1.0 or 0.9
+            )
             b:Show()
-            -- Capture for closure
-            local capturedItem = item
+
+            -- Always assign a fresh OnClick — this is critical so rows point to
+            -- the currently-open container's selText, not a stale closure.
+            local capturedItem      = item
             local capturedContainer = container
+            local capturedSelText   = selText
             b:SetScript("OnClick", function()
                 capturedContainer._selected = capturedItem.value
-                selText:SetText(capturedItem.text or tostring(capturedItem.value))
+                capturedSelText:SetText(capturedItem.text or tostring(capturedItem.value))
                 popup:Hide()
                 if capturedContainer._onSelect then
                     capturedContainer._onSelect(capturedItem.value)
@@ -430,10 +505,10 @@ local function JT_CreateDropdown(parent, width, maxVisible)
             end)
         end
 
-        -- Hide unused buttons
-        for i = #container._items + 1, #popup.buttons do
-            popup.buttons[i]:Hide()
-        end
+        -- Position popup below button
+        popup:ClearAllPoints()
+        popup:SetPoint("TOPLEFT", btn, "BOTTOMLEFT", 0, -2)
+        popup:Show()
     end)
 
     return container
@@ -483,6 +558,12 @@ local function JT_CreateScrollFrame(parent, width, height)
         bar:SetMinMaxValues(0, scrollRange)
         if bar:GetValue() > scrollRange then
             bar:SetValue(scrollRange)
+        end
+        -- Hide the scrollbar entirely when there is nothing to scroll
+        if scrollRange == 0 then
+            bar:Hide()
+        else
+            bar:Show()
         end
     end
 
