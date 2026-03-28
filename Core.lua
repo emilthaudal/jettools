@@ -86,6 +86,8 @@ local MODULE_DEFAULTS = {
         posX = 0,
         posY = -200,
         anchorFrame = "",
+        anchorPoint = "CENTER",
+        relativePoint = "CENTER",
     },
     CombatRes = {
         enabled = false,
@@ -95,6 +97,8 @@ local MODULE_DEFAULTS = {
         posY = -250,
         showLabel = true,
         anchorFrame = "",
+        anchorPoint = "CENTER",
+        relativePoint = "CENTER",
     },
 }
 

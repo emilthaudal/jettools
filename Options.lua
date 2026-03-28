@@ -7,14 +7,16 @@ local addonName, JT = ...
 local optionsFrame = nil
 
 -- Sentinel values for synthetic (multi-module) tabs
-local PROFILES_TAB  = "Profiles"
-local COMBAT_TAB    = "__Combat__"
-local REMINDERS_TAB = "__Reminders__"
+local PROFILES_TAB    = "Profiles"
+local COMBAT_TAB      = "__Combat__"
+local REMINDERS_TAB   = "__Reminders__"
+local CHARACTER_TAB   = "__Character__"
 
 -- Which real modules each synthetic tab aggregates (in display order)
 local TAB_MODULES = {
     [COMBAT_TAB]    = { "CombatStatus", "CombatTimer", "CombatRes" },
     [REMINDERS_TAB] = { "PetReminders", "StealthReminder" },
+    [CHARACTER_TAB] = { "CharacterSheet", "GearUpgradeRanks", "CharacterStatFormatting" },
 }
 
 -- Defined display order for modules in the sidebar (Profiles is last)
@@ -22,10 +24,8 @@ local MODULE_ORDER = {
     "RangeIndicator",
     "CurrentExpansionFilter",
     "AutoRoleQueue",
-    "CharacterSheet",
-    "GearUpgradeRanks",
+    CHARACTER_TAB,
     "CDMAuraRemover",
-    "CharacterStatFormatting",
     "SlashCommands",
     COMBAT_TAB,
     REMINDERS_TAB,
@@ -38,12 +38,10 @@ local MODULE_LABELS = {
     RangeIndicator          = "Range Indicator",
     CurrentExpansionFilter  = "Expansion Filter",
     AutoRoleQueue           = "Auto Role Queue",
-    CharacterSheet          = "Character Sheet",
-    GearUpgradeRanks        = "Gear Ranks",
     CDMAuraRemover          = "Aura Remover",
-    CharacterStatFormatting = "Stat Formatting",
     SlashCommands           = "Slash Commands",
     BuffBarStyling          = "Buff Bar Styling",
+    [CHARACTER_TAB]         = "Character",
     [COMBAT_TAB]            = "Combat",
     [REMINDERS_TAB]         = "Reminders",
     [PROFILES_TAB]          = "Profiles",
@@ -688,7 +686,7 @@ local function BuildOptionControl(parent, moduleName, schema, yOffset)
         slider:SetAfterValueChanged(function(val)
             JT:SetModuleSetting(moduleName, key, val)
         end)
-        return yOffset - 52
+        return yOffset - 62   -- 48px container + 14px bottom gap
 
     elseif schemaType == "input" then
         local editBox = JT_CreateEditBox(parent, schema.label,
@@ -698,7 +696,7 @@ local function BuildOptionControl(parent, moduleName, schema, yOffset)
         editBox:SetOnTextChanged(function(text)
             JT:SetModuleSetting(moduleName, key, text)
         end)
-        return yOffset - 50
+        return yOffset - 58   -- ~48px container + 10px bottom gap
 
     elseif schemaType == "dropdown" then
         local items = {}
@@ -720,15 +718,17 @@ local function BuildOptionControl(parent, moduleName, schema, yOffset)
             end
         end
 
+        -- The dropdown label FontString is anchored 14px ABOVE the container top.
+        -- Shift the container down by 14px so the label sits inside the allotted space.
         local dd = JT_CreateDropdown(parent, schema.width or (CONTENT_WIDTH - INDENT), 8)
-        dd:SetPoint("TOPLEFT", parent, "TOPLEFT", LEFT_PAD + INDENT, yOffset)
+        dd:SetPoint("TOPLEFT", parent, "TOPLEFT", LEFT_PAD + INDENT, yOffset - 14)
         dd:SetLabel(schema.label)
         dd:SetItems(items)
         dd:SetOnSelect(function(value)
             JT:SetModuleSetting(moduleName, key, value)
         end)
         dd:SetSelectedValue(currentValue)
-        return yOffset - 55
+        return yOffset - 14 - 28 - 12   -- label(14) + button(28) + gap(12)
 
     elseif schemaType == "button" then
         local btn = JT_CreateButton(parent, schema.label, schema.width or 120, 24, "accent")
@@ -1135,6 +1135,9 @@ local function CreateOptionsFrame()
     frame:SetScript("OnShow", function()
         -- Refresh the global font dropdown to reflect the current DB value
         if frame._refreshGlobalFontDD then frame._refreshGlobalFontDD() end
+        -- Show previews for the currently selected tab (if it's the Combat tab)
+        -- The SelectButton call on initial tab select will handle this, but if the
+        -- frame is re-shown with Combat already selected, trigger preview here.
         for _, name in ipairs(PREVIEW_MODULES) do
             local m = JT.modules[name]
             if m and m.ShowPreview then m:ShowPreview() end

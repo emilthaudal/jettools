@@ -182,9 +182,27 @@ function CombatRes:ApplyPosition()
     if not settings then return end
     local anchorName = settings.anchorFrame
     local anchor = (anchorName and anchorName ~= "" and _G[anchorName]) or UIParent
+    local pt     = (settings.anchorPoint   and settings.anchorPoint   ~= "") and settings.anchorPoint   or "CENTER"
+    local relPt  = (settings.relativePoint and settings.relativePoint ~= "") and settings.relativePoint or "CENTER"
     resFrame:ClearAllPoints()
-    resFrame:SetPoint("CENTER", anchor, "CENTER", settings.posX or 0, settings.posY or -250)
+    resFrame:SetPoint(pt, anchor, relPt, settings.posX or 0, settings.posY or -250)
 end
+
+-- ──────────────────────────────────────────────────────────────
+-- Anchor point options (shared)
+-- ──────────────────────────────────────────────────────────────
+
+local ANCHOR_POINTS = {
+    { text = "Center",       value = "CENTER" },
+    { text = "Top",          value = "TOP" },
+    { text = "Bottom",       value = "BOTTOM" },
+    { text = "Left",         value = "LEFT" },
+    { text = "Right",        value = "RIGHT" },
+    { text = "Top Left",     value = "TOPLEFT" },
+    { text = "Top Right",    value = "TOPRIGHT" },
+    { text = "Bottom Left",  value = "BOTTOMLEFT" },
+    { text = "Bottom Right", value = "BOTTOMRIGHT" },
+}
 
 -- ──────────────────────────────────────────────────────────────
 -- Options
@@ -192,15 +210,18 @@ end
 
 function CombatRes:GetOptions()
     return {
-        { type = "header",   label = "Combat Res Tracker" },
+        { type = "header",      label = "Combat Res Tracker" },
         { type = "description", text = "Tracks Rebirth charges and cooldown. Only visible while in a group." },
-        { type = "checkbox", label = "Enabled",      key = "enabled",   default = false },
-        { type = "checkbox", label = "Show 'CR:' label", key = "showLabel", default = true },
-        { type = "dropdown", label = "Font",          key = "fontFace",  options = GetAvailableFonts(), default = "Friz Quadrata TT" },
-        { type = "slider",   label = "Font Size",     key = "fontSize",  min = 10, max = 64, step = 1,   default = 18  },
-        { type = "input",    label = "Anchor Frame (leave blank for screen centre)", key = "anchorFrame", width = 200 },
-        { type = "slider",   label = "Position X",    key = "posX",      min = -900, max = 900, step = 1, default = 0    },
-        { type = "slider",   label = "Position Y",    key = "posY",      min = -500, max = 500, step = 1, default = -250 },
+        { type = "checkbox",    label = "Enabled",               key = "enabled",       default = false },
+        { type = "checkbox",    label = "Show 'CR:' label",      key = "showLabel",     default = true },
+        { type = "dropdown",    label = "Font",                  key = "fontFace",      options = GetAvailableFonts(), default = "Friz Quadrata TT" },
+        { type = "slider",      label = "Font Size",             key = "fontSize",      min = 10, max = 64, step = 1, default = 18 },
+        { type = "header",      label = "Position" },
+        { type = "input",       label = "Anchor Frame (leave blank for screen centre)", key = "anchorFrame", width = 200 },
+        { type = "dropdown",    label = "Anchor Point (text)",    key = "anchorPoint",   options = ANCHOR_POINTS, default = "CENTER" },
+        { type = "dropdown",    label = "Relative Point (frame)", key = "relativePoint", options = ANCHOR_POINTS, default = "CENTER" },
+        { type = "slider",      label = "Position X",             key = "posX",          min = -2000, max = 2000, step = 1, default = 0    },
+        { type = "slider",      label = "Position Y",             key = "posY",          min = -1200, max = 1200, step = 1, default = -250 },
     }
 end
 
@@ -252,7 +273,8 @@ end
 function CombatRes:OnSettingChanged(key, value)
     if key == "fontSize" or key == "fontFace" then
         self:ApplySettings()
-    elseif key == "posX" or key == "posY" or key == "anchorFrame" then
+    elseif key == "posX" or key == "posY" or key == "anchorFrame"
+        or key == "anchorPoint" or key == "relativePoint" then
         self:ApplyPosition()
     end
     -- Keep preview live while options panel is open
