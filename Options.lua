@@ -98,10 +98,11 @@ local function JT_CreateButton(parent, text, width, height, style)
     local btn = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
     btn:SetSize(width, height)
     btn:SetText(text or "")
-    if style == "red" then
-        btn:GetNormalTexture():SetVertexColor(1, 0.4, 0.4)
-    elseif style == "accent" then
-        btn:GetNormalTexture():SetVertexColor(0.4, 0.7, 1)
+    if style == "red" or style == "accent" then
+        -- SetNormalTexture ensures GetNormalTexture() is non-nil before tinting
+        btn:SetNormalTexture("Interface\\Buttons\\WHITE8X8")
+        local color = (style == "red") and { 0.7, 0.25, 0.25 } or { 0.25, 0.45, 0.8 }
+        btn:GetNormalTexture():SetVertexColor(color[1], color[2], color[3])
     end
     -- Convenience: SetOnClick
     btn.SetOnClick = function(self, fn) self:SetScript("OnClick", fn) end
@@ -144,7 +145,6 @@ end
 local function JT_CreateCheckButton(parent, text, onChange)
     local cb = CreateFrame("CheckButton", nil, parent, "UICheckButtonTemplate")
     cb:SetSize(24, 24)
-    -- The template attaches a FontString child named "Text" but we set it manually
     local label = cb:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     label:SetPoint("LEFT", cb, "RIGHT", 2, 0)
     label:SetText(text or "")
@@ -152,11 +152,7 @@ local function JT_CreateCheckButton(parent, text, onChange)
     cb:SetScript("OnClick", function(self)
         if onChange then onChange(self:GetChecked()) end
     end)
-    -- Convenience shim
-    cb.SetChecked = function(self, val)
-        -- call raw Blizzard method
-        CheckButton.SetChecked(self, val and true or false)
-    end
+    -- NOTE: CheckButton frames already have SetChecked built-in; no shim needed.
     return cb
 end
 
@@ -319,6 +315,8 @@ local function JT_CreateDropdown(parent, width, maxVisible)
     local btn = CreateFrame("Button", nil, container, "UIPanelButtonTemplate")
     btn:SetSize(width, 22)
     btn:SetPoint("TOPLEFT", container, "TOPLEFT", 0, 0)
+    -- Ensure a normal texture exists before tinting
+    btn:SetNormalTexture("Interface\\Buttons\\WHITE8X8")
     btn:GetNormalTexture():SetVertexColor(0.25, 0.25, 0.35)
 
     -- Selected value text inside the button (left-aligned)
@@ -504,7 +502,9 @@ local function ClearFrame(parent)
     local children = { parent:GetChildren() }
     for _, child in ipairs(children) do
         child:Hide()
-        child:SetParent(nil)
+        -- Do NOT SetParent(nil) — in modern WoW that reparents to WorldFrame
+        -- instead of destroying the frame. Hiding is sufficient; frames are
+        -- recreated fresh on the next PopulateModulePane call.
     end
     local regions = { parent:GetRegions() }
     for _, region in ipairs(regions) do
