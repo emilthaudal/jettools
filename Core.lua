@@ -65,6 +65,21 @@ local MODULE_DEFAULTS = {
         posX = 0,
         posY = 150,
     },
+    BuffBarStyling = {
+        enabled = false,
+        texture = "Solid",
+        barHeight = 26,
+        barWidth = 200,
+        showIcon = true,
+        fontFace = "Friz Quadrata TT",
+        fontSize = 13,
+        anchorFrame = "",
+        anchorPoint = "TOPLEFT",
+        relativePoint = "BOTTOMLEFT",
+        matchAnchorWidth = false,
+        offsetX = 0,
+        offsetY = 0,
+    },
 }
 
 -- Deep copy helper (fills in missing keys from src into dest)

@@ -24,6 +24,7 @@ local MODULE_ORDER = {
     "CombatStatus",
     "PetReminders",
     "StealthReminder",
+    "BuffBarStyling",
     PROFILES_TAB,
 }
 
@@ -40,6 +41,7 @@ local MODULE_LABELS = {
     CombatStatus            = "Combat Status",
     PetReminders            = "Pet Reminders",
     StealthReminder         = "Stealth Reminder",
+    BuffBarStyling          = "Buff Bar Styling",
     [PROFILES_TAB]          = "Profiles",
 }
 
@@ -223,6 +225,53 @@ local function BuildOptionControl(parent, moduleName, schema, yOffset)
             cp:SetColor(currentValue.r, currentValue.g, currentValue.b, currentValue.a or 1)
         end
         return yOffset - 36
+
+    elseif schemaType == "group" then
+        -- Collapsible section: a toggle button + indented children
+        -- Expanded state is stored in a local table keyed by label, per repopulation
+        if not BuildOptionControl._groupState then
+            BuildOptionControl._groupState = {}
+        end
+        local groupKey = moduleName .. ":" .. (schema.label or "")
+        if BuildOptionControl._groupState[groupKey] == nil then
+            -- Default to expanded if schema says so, otherwise collapsed
+            BuildOptionControl._groupState[groupKey] = schema.expanded ~= false
+        end
+
+        local isExpanded = BuildOptionControl._groupState[groupKey]
+        local toggleLabel = (isExpanded and "- " or "+ ") .. (schema.label or "Group")
+
+        -- We need a reference to the button so we can re-render — store children frames
+        local groupBtn = AF.CreateButton(parent, toggleLabel, "widget", CONTENT_WIDTH - INDENT, 24)
+        AF.SetPoint(groupBtn, "TOPLEFT", parent, "TOPLEFT", LEFT_PAD, yOffset)
+        yOffset = yOffset - 30
+
+        -- Render children if expanded; track the frames for show/hide toggle
+        local childFrames = {}
+        local childStartY = yOffset
+
+        if isExpanded and schema.children then
+            for _, child in ipairs(schema.children) do
+                -- children are rendered with extra indent
+                local savedLeftPad = LEFT_PAD
+                -- temporarily bump indent by re-calling with a wrapper
+                yOffset = BuildOptionControl(parent, moduleName, child, yOffset)
+            end
+        end
+
+        -- Wire the toggle button — clicking it rebuilds the whole pane
+        -- We flip the state then trigger re-population via the scroll parent trick:
+        -- Since we cannot easily re-invoke PopulateModulePane from here, we use a
+        -- lightweight approach: store state and request repopulation via a shared hook.
+        groupBtn:SetOnClick(function()
+            BuildOptionControl._groupState[groupKey] = not BuildOptionControl._groupState[groupKey]
+            -- Signal that options pane needs rebuilding
+            if JT._requestOptionsRepopulate then
+                JT._requestOptionsRepopulate()
+            end
+        end)
+
+        return yOffset
     end
 
     return yOffset
@@ -497,6 +546,11 @@ local function PopulateModulePane(scrollParent, moduleName)
     local totalHeight = math.abs(yOffset) + 16
     scrollParent:SetContentHeight(math.max(totalHeight, 1))
     scrollParent:ResetScroll()
+
+    -- Expose a repopulate hook so group toggles can re-render this pane
+    JT._requestOptionsRepopulate = function()
+        PopulateModulePane(scrollParent, moduleName)
+    end
 end
 
 -- ─────────────────────────────────────────────────────────────────────────────
