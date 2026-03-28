@@ -1070,7 +1070,7 @@ local function CreateOptionsFrame()
 
     local function DeselectAll()
         for _, b in ipairs(sidebarButtons) do
-            b:GetNormalTexture():SetVertexColor(0.18, 0.18, 0.28)
+            if b._bg then b._bg:SetVertexColor(0.18, 0.18, 0.28) end
             b:SetNormalFontObject("GameFontNormalSmall")
         end
     end
@@ -1080,7 +1080,7 @@ local function CreateOptionsFrame()
         selectedIndex = idx
         local b = sidebarButtons[idx]
         if b then
-            b:GetNormalTexture():SetVertexColor(0.3, 0.5, 0.9)
+            if b._bg then b._bg:SetVertexColor(0.3, 0.5, 0.9) end
         end
         PopulateModulePane(scrollParent, sidebarButtons[idx]._moduleName)
     end
@@ -1090,8 +1090,15 @@ local function CreateOptionsFrame()
         local btn = CreateFrame("Button", nil, sidebar, "UIPanelButtonTemplate")
         btn:SetSize(SIDEBAR_W - SIDEBAR_PAD * 2, BTN_H)
         btn:SetText(label)
-        btn:GetNormalTexture():SetVertexColor(0.18, 0.18, 0.28)
         btn:SetNormalFontObject("GameFontNormalSmall")
+
+        -- Create an explicit background texture we can tint for selection state
+        local bg = btn:CreateTexture(nil, "BACKGROUND")
+        bg:SetAllPoints()
+        bg:SetTexture("Interface\\Buttons\\WHITE8X8")
+        bg:SetVertexColor(0.18, 0.18, 0.28)
+        btn._bg = bg
+
         btn:SetPoint("TOPLEFT", sidebar, "TOPLEFT",
             SIDEBAR_PAD, -(SIDEBAR_PAD + (i - 1) * (BTN_H + 4)))
         btn.id          = i
