@@ -384,11 +384,13 @@ local function JT_CreateDropdown(parent, width, maxVisible)
     selText:SetText("--")
     btn._selText = selText
 
-    -- Arrow indicator — ▾ = U+25BE = UTF-8 E2 96 BE = \226\150\190
-    local arrow = btn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    arrow:SetPoint("RIGHT", btn, "RIGHT", -4, 0)
-    arrow:SetText("\226\150\190")
-    arrow:SetTextColor(0.7, 0.7, 0.7)
+    -- Arrow indicator — use a WoW texture atlas arrow to avoid font glyph gaps
+    local arrow = btn:CreateTexture(nil, "OVERLAY")
+    arrow:SetSize(12, 8)
+    arrow:SetPoint("RIGHT", btn, "RIGHT", -6, 0)
+    arrow:SetTexture("Interface\\Buttons\\Arrow-Down-Up")
+    arrow:SetTexCoord(0, 1, 0, 0.5)
+    arrow:SetVertexColor(0.7, 0.7, 0.7)
 
     container._items    = {}
     container._selected = nil
