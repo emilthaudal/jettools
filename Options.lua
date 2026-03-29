@@ -1166,21 +1166,17 @@ local function CreateOptionsFrame()
     frame:SetBackdropBorderColor(0.3, 0.4, 0.6, 0.8)
     frame:Hide()
 
-    -- Auto-preview: show CombatTimer and CombatRes overlays while options are open,
-    -- but only if the module's 'enabled' setting is true.
+    -- Auto-preview: show CombatTimer and CombatRes overlays while options are open.
     local PREVIEW_MODULES = { "CombatTimer", "CombatRes" }
     frame:SetScript("OnShow", function()
         -- Refresh the global font dropdown to reflect the current DB value
         if frame._refreshGlobalFontDD then frame._refreshGlobalFontDD() end
-        -- Show previews only for modules that are actually enabled by the user.
-        -- If a module is disabled (settings.enabled == false), do not show its preview.
+        -- Always show previews when the options panel opens so the user can see
+        -- the current position/font/size settings regardless of enabled state.
         for _, name in ipairs(PREVIEW_MODULES) do
             local m = JT.modules[name]
             if m and m.ShowPreview then
-                local settings = JT:GetModuleSettings(name)
-                if settings and settings.enabled then
-                    m:ShowPreview()
-                end
+                m:ShowPreview()
             end
         end
     end)
