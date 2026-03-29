@@ -89,6 +89,28 @@ StaticPopupDialogs["JETTOOLS_RESET_PROFILE"] = {
 -- Pure WoW API widget helpers
 -- ─────────────────────────────────────────────────────────────────────────────
 
+-- Helper: fully override all Blizzard UIPanelButtonTemplate textures on a button
+-- so none of the default red/orange artwork bleeds through in any state.
+local function JT_StripButtonTextures(btn, normalColor, pushedColor, highlightColor)
+    -- Override all four texture slots; leaving any nil lets Blizzard artwork show.
+    btn:SetNormalTexture("Interface\\Buttons\\WHITE8X8")
+    btn:SetPushedTexture("Interface\\Buttons\\WHITE8X8")
+    btn:SetHighlightTexture("Interface\\Buttons\\WHITE8X8")
+    btn:SetDisabledTexture("Interface\\Buttons\\WHITE8X8")
+
+    normalColor    = normalColor    or { 0.22, 0.22, 0.28 }
+    pushedColor    = pushedColor    or { normalColor[1] * 0.7, normalColor[2] * 0.7, normalColor[3] * 0.7 }
+    highlightColor = highlightColor or { normalColor[1] * 1.4, normalColor[2] * 1.4, normalColor[3] * 1.4 }
+
+    btn:GetNormalTexture():SetVertexColor(normalColor[1], normalColor[2], normalColor[3])
+    btn:GetPushedTexture():SetVertexColor(pushedColor[1], pushedColor[2], pushedColor[3])
+    -- Highlight texture is additive-blend; keep it subtle
+    local hl = btn:GetHighlightTexture()
+    hl:SetVertexColor(highlightColor[1], highlightColor[2], highlightColor[3], 0.25)
+    hl:SetBlendMode("ADD")
+    btn:GetDisabledTexture():SetVertexColor(normalColor[1] * 0.5, normalColor[2] * 0.5, normalColor[3] * 0.5)
+end
+
 -- Styled button using WoW templates
 local function JT_CreateButton(parent, text, width, height, style)
     width  = width  or 120
@@ -96,12 +118,17 @@ local function JT_CreateButton(parent, text, width, height, style)
     local btn = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
     btn:SetSize(width, height)
     btn:SetText(text or "")
-    if style == "red" or style == "accent" then
-        -- SetNormalTexture ensures GetNormalTexture() is non-nil before tinting
-        btn:SetNormalTexture("Interface\\Buttons\\WHITE8X8")
-        local color = (style == "red") and { 0.7, 0.25, 0.25 } or { 0.25, 0.45, 0.8 }
-        btn:GetNormalTexture():SetVertexColor(color[1], color[2], color[3])
+
+    -- Always strip all Blizzard artwork — pick colours based on style.
+    if style == "red" then
+        JT_StripButtonTextures(btn, { 0.55, 0.18, 0.18 }, { 0.4, 0.12, 0.12 }, { 0.9, 0.3, 0.3 })
+    elseif style == "accent" then
+        JT_StripButtonTextures(btn, { 0.20, 0.36, 0.65 }, { 0.14, 0.26, 0.48 }, { 0.35, 0.55, 1.0 })
+    else
+        -- Default neutral style — darker than sidebar so it's still distinguishable
+        JT_StripButtonTextures(btn, { 0.22, 0.22, 0.28 }, { 0.14, 0.14, 0.18 }, { 0.35, 0.45, 0.65 })
     end
+
     -- Convenience: SetOnClick
     btn.SetOnClick = function(self, fn) self:SetScript("OnClick", fn) end
     return btn
@@ -369,12 +396,20 @@ local function JT_CreateDropdown(parent, width, maxVisible)
     label:SetTextColor(0.9, 0.9, 0.9)
     container._label = label
 
-    -- Main dropdown button
+    -- Main dropdown button — strip ALL Blizzard artwork to prevent red/orange bleed
     local btn = CreateFrame("Button", nil, container, "UIPanelButtonTemplate")
     btn:SetSize(width, 22)
     btn:SetPoint("TOPLEFT", container, "TOPLEFT", 0, 0)
     btn:SetNormalTexture("Interface\\Buttons\\WHITE8X8")
+    btn:SetPushedTexture("Interface\\Buttons\\WHITE8X8")
+    btn:SetHighlightTexture("Interface\\Buttons\\WHITE8X8")
+    btn:SetDisabledTexture("Interface\\Buttons\\WHITE8X8")
     btn:GetNormalTexture():SetVertexColor(0.25, 0.25, 0.35)
+    btn:GetPushedTexture():SetVertexColor(0.17, 0.17, 0.24)
+    local ddHl = btn:GetHighlightTexture()
+    ddHl:SetVertexColor(0.40, 0.55, 0.90, 0.20)
+    ddHl:SetBlendMode("ADD")
+    btn:GetDisabledTexture():SetVertexColor(0.15, 0.15, 0.20)
 
     -- Selected value text inside the button (left-aligned)
     local selText = btn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
@@ -1131,17 +1166,22 @@ local function CreateOptionsFrame()
     frame:SetBackdropBorderColor(0.3, 0.4, 0.6, 0.8)
     frame:Hide()
 
-    -- Auto-preview: show CombatTimer and CombatRes overlays while options are open
+    -- Auto-preview: show CombatTimer and CombatRes overlays while options are open,
+    -- but only if the module's 'enabled' setting is true.
     local PREVIEW_MODULES = { "CombatTimer", "CombatRes" }
     frame:SetScript("OnShow", function()
         -- Refresh the global font dropdown to reflect the current DB value
         if frame._refreshGlobalFontDD then frame._refreshGlobalFontDD() end
-        -- Show previews for the currently selected tab (if it's the Combat tab)
-        -- The SelectButton call on initial tab select will handle this, but if the
-        -- frame is re-shown with Combat already selected, trigger preview here.
+        -- Show previews only for modules that are actually enabled by the user.
+        -- If a module is disabled (settings.enabled == false), do not show its preview.
         for _, name in ipairs(PREVIEW_MODULES) do
             local m = JT.modules[name]
-            if m and m.ShowPreview then m:ShowPreview() end
+            if m and m.ShowPreview then
+                local settings = JT:GetModuleSettings(name)
+                if settings and settings.enabled then
+                    m:ShowPreview()
+                end
+            end
         end
     end)
     frame:SetScript("OnHide", function()
@@ -1261,12 +1301,22 @@ local function CreateOptionsFrame()
         btn:SetText(label)
         btn:SetNormalFontObject("GameFontNormalSmall")
 
-        -- Create an explicit background texture we can tint for selection state
-        local bg = btn:CreateTexture(nil, "BACKGROUND")
-        bg:SetAllPoints()
-        bg:SetTexture("Interface\\Buttons\\WHITE8X8")
-        bg:SetVertexColor(0.18, 0.18, 0.28)
-        btn._bg = bg
+        -- Strip all Blizzard artwork so the custom bg tinting shows cleanly.
+        -- We use the normal/pushed/highlight slots as the selection background.
+        btn:SetNormalTexture("Interface\\Buttons\\WHITE8X8")
+        btn:SetPushedTexture("Interface\\Buttons\\WHITE8X8")
+        btn:SetHighlightTexture("Interface\\Buttons\\WHITE8X8")
+        btn:SetDisabledTexture("Interface\\Buttons\\WHITE8X8")
+        btn:GetNormalTexture():SetVertexColor(0.18, 0.18, 0.28)
+        btn:GetPushedTexture():SetVertexColor(0.12, 0.12, 0.20)
+        local sidebarHl = btn:GetHighlightTexture()
+        sidebarHl:SetVertexColor(0.35, 0.50, 0.85, 0.20)
+        sidebarHl:SetBlendMode("ADD")
+        btn:GetDisabledTexture():SetVertexColor(0.10, 0.10, 0.15)
+
+        -- Keep _bg pointing to the NormalTexture so DeselectAll/SelectButton
+        -- can tint it for the active-tab highlight.
+        btn._bg = btn:GetNormalTexture()
 
         btn:SetPoint("TOPLEFT", sidebar, "TOPLEFT",
             SIDEBAR_PAD, -(SIDEBAR_PAD + (i - 1) * (BTN_H + 4)))

@@ -184,16 +184,54 @@ function CombatRes:ApplySettings()
     end
 end
 
+-- Known friendly aliases for common WoW UI frames.
+-- Users may type these short names instead of exact global frame names.
+local FRAME_ALIASES = {
+    ["chat"]        = "ChatFrame1",
+    ["chat1"]       = "ChatFrame1",
+    ["chat2"]       = "ChatFrame2",
+    ["chat3"]       = "ChatFrame3",
+    ["minimap"]     = "Minimap",
+    ["bag"]         = "ContainerFrame1",
+    ["actionbar"]   = "ActionBar1",
+    ["playerframe"] = "PlayerFrame",
+    ["targetframe"] = "TargetFrame",
+}
+
+-- Resolve an anchor frame name to an actual WoW frame object.
+-- Returns UIParent when the name is blank or does not resolve to a usable frame.
+local function ResolveAnchorFrame(anchorName)
+    if not anchorName or anchorName == "" then return UIParent end
+    -- Try friendly alias first (case-insensitive)
+    local resolved = FRAME_ALIASES[anchorName:lower()]
+    if resolved then anchorName = resolved end
+    local obj = _G[anchorName]
+    -- Validate: must be a Frame (has GetObjectType) and not merely a table/string
+    if obj and type(obj) == "table" and obj.GetObjectType then
+        local ok, objType = pcall(obj.GetObjectType, obj)
+        if ok and objType then
+            return obj
+        end
+    end
+    -- Name did not resolve to a valid frame — warn once and fall back
+    print("|cff00aaffJetTools|r: Anchor frame '" .. anchorName .. "' not found, using screen centre.")
+    return UIParent
+end
+
 function CombatRes:ApplyPosition()
     if not resFrame then return end
     local settings = JT:GetModuleSettings("CombatRes")
     if not settings then return end
     local anchorName = settings.anchorFrame
-    local anchor = (anchorName and anchorName ~= "" and _G[anchorName]) or UIParent
+    local anchor = ResolveAnchorFrame(anchorName)
     local pt     = (settings.anchorPoint   and settings.anchorPoint   ~= "") and settings.anchorPoint   or "CENTER"
     local relPt  = (settings.relativePoint and settings.relativePoint ~= "") and settings.relativePoint or "CENTER"
+    -- Temporarily disable screen clamping so large pixel offsets work as expected,
+    -- then re-enable it so the frame can't be dragged fully off-screen.
+    resFrame:SetClampedToScreen(false)
     resFrame:ClearAllPoints()
     resFrame:SetPoint(pt, anchor, relPt, settings.posX or 0, settings.posY or -250)
+    resFrame:SetClampedToScreen(true)
 end
 
 -- ──────────────────────────────────────────────────────────────
@@ -225,7 +263,7 @@ function CombatRes:GetOptions()
         { type = "dropdown",    label = "Font",                  key = "fontFace",      options = GetAvailableFonts(), default = "Friz Quadrata TT" },
         { type = "slider",      label = "Font Size",             key = "fontSize",      min = 10, max = 64, step = 1, default = 18 },
         { type = "header",      label = "Position" },
-        { type = "input",       label = "Anchor Frame (leave blank for screen centre)", key = "anchorFrame", width = 200 },
+        { type = "input",       label = "Anchor Frame (leave blank for screen centre; aliases: chat, minimap, playerframe, targetframe)", key = "anchorFrame", width = 200 },
         { type = "dropdown",    label = "Anchor Point (text)",    key = "anchorPoint",   options = ANCHOR_POINTS, default = "CENTER" },
         { type = "dropdown",    label = "Relative Point (frame)", key = "relativePoint", options = ANCHOR_POINTS, default = "CENTER" },
         { type = "slider",      label = "Position X",             key = "posX",          min = -2000, max = 2000, step = 1, default = 0    },
