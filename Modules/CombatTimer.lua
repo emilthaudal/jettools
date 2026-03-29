@@ -49,6 +49,7 @@ end
 -- ──────────────────────────────────────────────────────────────
 
 local isEnabled      = false
+local isPreviewMode  = false -- true while the options panel is open
 local timerFrame     = nil
 local timerText      = nil
 local startTime      = nil   -- GetTime() when combat started
@@ -94,6 +95,15 @@ local function CreateTimerFrame()
     timerText:SetJustifyH("CENTER")
 
     timerFrame:SetScript("OnUpdate", function(self, elapsed)
+        -- Keep the preview alive when the options panel is open, regardless of enabled state
+        if isPreviewMode then
+            if not timerText:GetText() or timerText:GetText() == "" then
+                timerText:SetText("0:00")
+                timerText:SetTextColor(0.7, 0.7, 0.7)
+            end
+            return
+        end
+
         if not isEnabled then return end
 
         lastUpdate = lastUpdate + elapsed
@@ -247,7 +257,8 @@ function CombatTimer:Disable()
     startTime = nil
     eventFrame:UnregisterEvent("PLAYER_REGEN_DISABLED")
     eventFrame:UnregisterEvent("PLAYER_REGEN_ENABLED")
-    if timerFrame then timerFrame:Hide() end
+    -- Only hide if not currently showing the options preview
+    if not isPreviewMode and timerFrame then timerFrame:Hide() end
 end
 
 function CombatTimer:OnSettingChanged(key, value)
@@ -258,13 +269,14 @@ function CombatTimer:OnSettingChanged(key, value)
         self:ApplyPosition()
     end
     -- Keep preview live while options panel is open
-    if _G["JetToolsOptionsFrame"] and _G["JetToolsOptionsFrame"]:IsShown() then
+    if isPreviewMode then
         self:ShowPreview()
     end
 end
 
 function CombatTimer:ShowPreview()
     if not timerFrame then CreateTimerFrame() end
+    isPreviewMode = true
     self:ApplySettings()
     self:ApplyPosition()
     if timerText then
@@ -275,6 +287,7 @@ function CombatTimer:ShowPreview()
 end
 
 function CombatTimer:HidePreview()
+    isPreviewMode = false
     -- Only hide if the module is not actively enabled (leave combat display running)
     if not isEnabled and timerFrame then
         timerFrame:Hide()

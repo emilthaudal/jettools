@@ -53,10 +53,11 @@ end
 -- Module state
 -- ──────────────────────────────────────────────────────────────
 
-local isEnabled  = false
-local resFrame   = nil
-local resText    = nil
-local lastUpdate = 0
+local isEnabled   = false
+local isPreviewMode = false -- true while the options panel is open
+local resFrame    = nil
+local resText     = nil
+local lastUpdate  = 0
 local UPDATE_INTERVAL = 0.1
 
 -- ──────────────────────────────────────────────────────────────
@@ -65,6 +66,9 @@ local UPDATE_INTERVAL = 0.1
 
 local function UpdateDisplay()
     if not resFrame then return end
+
+    -- Don't interfere with the options preview
+    if isPreviewMode then return end
 
     if not isEnabled then
         resFrame:Hide()
@@ -149,6 +153,10 @@ local function CreateResFrame()
     resText:SetJustifyH("CENTER")
 
     resFrame:SetScript("OnUpdate", function(self, elapsed)
+        -- Keep the preview alive when the options panel is open, regardless of enabled state
+        if isPreviewMode then
+            return
+        end
         if not isEnabled then return end
         lastUpdate = lastUpdate + elapsed
         if lastUpdate < UPDATE_INTERVAL then return end
@@ -267,7 +275,8 @@ function CombatRes:Disable()
     eventFrame:UnregisterEvent("GROUP_ROSTER_UPDATE")
     eventFrame:UnregisterEvent("PLAYER_ENTERING_WORLD")
     eventFrame:UnregisterEvent("CHALLENGE_MODE_START")
-    if resFrame then resFrame:Hide() end
+    -- Only hide if not currently showing the options preview
+    if not isPreviewMode and resFrame then resFrame:Hide() end
 end
 
 function CombatRes:OnSettingChanged(key, value)
@@ -278,7 +287,7 @@ function CombatRes:OnSettingChanged(key, value)
         self:ApplyPosition()
     end
     -- Keep preview live while options panel is open
-    if _G["JetToolsOptionsFrame"] and _G["JetToolsOptionsFrame"]:IsShown() then
+    if isPreviewMode then
         self:ShowPreview()
     else
         UpdateDisplay()
@@ -287,6 +296,7 @@ end
 
 function CombatRes:ShowPreview()
     if not resFrame then CreateResFrame() end
+    isPreviewMode = true
     self:ApplySettings()
     self:ApplyPosition()
     if resText then
@@ -298,6 +308,7 @@ function CombatRes:ShowPreview()
 end
 
 function CombatRes:HidePreview()
+    isPreviewMode = false
     if not isEnabled and resFrame then
         resFrame:Hide()
     end
