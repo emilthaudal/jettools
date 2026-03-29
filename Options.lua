@@ -630,6 +630,8 @@ local CONTENT_WIDTH = 340
 local LEFT_PAD      = 12
 local INDENT        = 16
 
+local groupState = {}
+
 local function BuildOptionControl(parent, moduleName, schema, yOffset)
     local schemaType = schema.type
     local key        = schema.key
@@ -787,15 +789,12 @@ local function BuildOptionControl(parent, moduleName, schema, yOffset)
         return yOffset - 36
 
     elseif schemaType == "group" then
-        if not BuildOptionControl._groupState then
-            BuildOptionControl._groupState = {}
-        end
         local groupKey = moduleName .. ":" .. (schema.label or "")
-        if BuildOptionControl._groupState[groupKey] == nil then
-            BuildOptionControl._groupState[groupKey] = schema.expanded ~= false
+        if groupState[groupKey] == nil then
+            groupState[groupKey] = schema.expanded ~= false
         end
 
-        local isExpanded = BuildOptionControl._groupState[groupKey]
+        local isExpanded = groupState[groupKey]
         local toggleLabel = (isExpanded and "- " or "+ ") .. (schema.label or "Group")
 
         local groupBtn = JT_CreateButton(parent, toggleLabel, CONTENT_WIDTH - INDENT, 24, nil)
@@ -809,7 +808,7 @@ local function BuildOptionControl(parent, moduleName, schema, yOffset)
         end
 
         groupBtn:SetOnClick(function()
-            BuildOptionControl._groupState[groupKey] = not BuildOptionControl._groupState[groupKey]
+            groupState[groupKey] = not groupState[groupKey]
             if JT._requestOptionsRepopulate then
                 JT._requestOptionsRepopulate()
             end
